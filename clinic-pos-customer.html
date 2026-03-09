@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>擇木良食 × 金鶯診所｜選購系統</title>
-<script src="config.js"></script>
+<script>
+// ── 內嵌設定（無需 config.js）──
+const APP_CONFIG = {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwyR1ZBcNCR7yCJH8kmKHCJtB-jE3I2YV6uj-NXjVpCYlCJwV5zDSbBscUmZneOe_Ub/exec'
+};
+// 自動寫入 localStorage，確保所有裝置皆可使用
+try { localStorage.setItem('gsUrl', APP_CONFIG.GAS_URL); } catch(e) {}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{
