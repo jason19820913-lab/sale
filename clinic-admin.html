@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>擇木良食 × 金鶯診所｜後台管理</title>
+<script src="config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -258,6 +259,7 @@ tbody tr:hover td{background:var(--sage-pale);}
     <div class="nav-tab active" onclick="switchPage('stats')"  id="navStats">📊 銷售統計</div>
     <div class="nav-tab"        onclick="switchPage('patient')" id="navPatient">🪪 顧客查詢</div>
     <div class="nav-tab"        onclick="switchPage('products')" id="navProducts">🛍️ 商品管理</div>
+    <div class="nav-tab"        onclick="switchPage('promos')"   id="navPromos">🏷️ 促銷活動</div>
     <div class="nav-tab"        onclick="switchPage('settings')" id="navSettings">⚙️ 系統設定</div>
   </div>
 
@@ -343,6 +345,36 @@ tbody tr:hover td{background:var(--sage-pale);}
   </div>
 
   <!-- ── SETTINGS PAGE ── -->
+
+  <div class="page" id="pagePromos">
+    <div class="page-title"><div class="page-icon">🏷️</div><div><div class="page-h">促銷活動</div><div class="page-sub">管理折扣與買N送N活動，儲存後自動同步至 Google Sheet</div></div></div>
+
+    <div class="sc">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        <h3 style="margin:0;">🏷️ 目前活動</h3>
+        <button class="btn btn-primary" onclick="openPromoModal()">＋ 新增活動</button>
+      </div>
+      <div id="promoList">
+        <div style="text-align:center;padding:40px;color:#aaa;">載入中...</div>
+      </div>
+    </div>
+
+    <!-- 促銷說明 -->
+    <div class="sc" style="background:#FFF8E1;border:1px solid #ECD9A0;">
+      <h3>📖 活動類型說明</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">
+        <div><strong>🎁 買N送N</strong><br>買滿N個免費送N個，自動計算組數與散裝。<br><span style="color:#888;">例：買6送1，7包只收6包錢</span></div>
+        <div><strong>💰 固定金額折扣</strong><br>結帳時直接折抵固定金額。<br><span style="color:#888;">例：滿額折50元</span></div>
+        <div><strong>📉 百分比折扣</strong><br>依商品小計打折。<br><span style="color:#888;">例：9折 → discountValue填90</span></div>
+        <div><strong>📦 套組定價</strong><br>指定商品以固定套組價販售。<br><span style="color:#888;">例：中碳套組固定1000元</span></div>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:#888;">
+        <strong>scope 適用範圍：</strong><br>
+        <code>all</code> 全部商品 ／ <code>group:protein</code> 蛋白代餐群組 ／ <code>group:mct</code> Q飽群組 ／ <code>id:p1,p2</code> 指定商品ID
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="pageSettings">
     <div class="page-title">系統設定</div>
     <div class="page-sub">Google Sheets 串接、人員名單、PIN 碼</div>
@@ -357,91 +389,98 @@ tbody tr:hover td{background:var(--sage-pale);}
         <div class="guide-step"><div class="gnum">3</div><div class="gtext">「部署」→「新增部署作業」→ 類型：<strong>網頁應用程式</strong>，存取權限：<strong>所有人</strong></div></div>
         <div class="guide-step"><div class="gnum">4</div><div class="gtext">複製部署後的 URL，貼入下方並儲存</div></div>
       </div>
-      <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:5px;letter-spacing:.5px;">📄 APPS SCRIPT 程式碼（動態欄位版）</div>
-      <div style="background:#FFF8E1;border:1px solid #ECD9A0;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#7A5800;">
-        🆕 <strong>動態欄位版</strong>：新增商品後不需重新部署，Sheet 會自動在右側新增欄位
+      <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:5px;letter-spacing:.5px;">📄 APPS SCRIPT 程式碼（通用版 — 只需部署一次）</div>
+      <div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#1B5E20;">
+        ✅ <strong>通用版</strong>：GAS 不含任何商品/人員/院區邏輯，之後不論怎麼新增功能都<strong>不需要重新部署</strong>
       </div>
-      <div class="code-block">
+      <div class="code-block" style="max-height:300px;overflow-y:auto;">
         <button class="copy-btn" onclick="copyScript()">複製</button>
-<span class="cm">// 擇木良食 × 金鶯診所｜銷售記錄接收器（動態欄位版）</span>
-<span class="cm">// 新增商品不需重新部署，doPost 會自動在 Sheet 新增欄位</span>
-<span class="kw">const</span> SHEET_NAME = <span class="str">'銷售紀錄'</span>;
-<span class="cm">// 固定欄位（前段 + 後段），商品欄位動態插入在中間</span>
-<span class="kw">const</span> FIXED_FRONT = [<span class="str">'日期'</span>,<span class="str">'時間'</span>,<span class="str">'院區'</span>,<span class="str">'顧客姓名'</span>,<span class="str">'身分證遮罩'</span>,<span class="str">'病歷號'</span>,<span class="str">'當班醫師'</span>,<span class="str">'櫃檯人員'</span>];
-<span class="kw">const</span> FIXED_BACK  = [<span class="str">'結帳金額'</span>,<span class="str">'付款方式'</span>,<span class="str">'醫師抽成'</span>,<span class="str">'員工抽成'</span>,<span class="str">'藥師抽成'</span>,<span class="str">'身分證雜湊'</span>];
+// 擇木良食 × 金鶯診所｜通用版 GAS（只需部署一次，永遠不用改）
+// ─────────────────────────────────────────────────────────────
+// doGet?sheet=工作頁名稱           → 讀取整頁所有資料（JSON）
+// doPost {sheet, headers, rows}    → 覆寫整頁（商品/人員/院區）
+// doPost {sheet, row, append:true} → 新增一列（銷售記錄）
+// ─────────────────────────────────────────────────────────────
+// 工作頁名稱（前後台 JS 定義，GAS 完全不需知道）：
+//   銷售紀錄 / 商品主檔 / 人員名單 / 院區清單
 
-<span class="kw">function</span> <span class="fn">getOrCreateSheet</span>() {
-  <span class="kw">const</span> ss = SpreadsheetApp.<span class="fn">getActiveSpreadsheet</span>();
-  <span class="kw">let</span> s = ss.<span class="fn">getSheetByName</span>(SHEET_NAME);
-  <span class="kw">if</span> (!s) {
-    s = ss.<span class="fn">insertSheet</span>(SHEET_NAME);
-    s.<span class="fn">appendRow</span>([...FIXED_FRONT, ...FIXED_BACK]);
-    s.<span class="fn">getRange</span>(<span class="str">'1:1'</span>).<span class="fn">setFontWeight</span>(<span class="str">'bold'</span>).<span class="fn">setBackground</span>(<span class="str">'#2C3E35'</span>).<span class="fn">setFontColor</span>(<span class="str">'#fff'</span>);
-    s.<span class="fn">setFrozenRows</span>(1);
+function getOrCreate(name, headers) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let s = ss.getSheetByName(name);
+  if (!s) {
+    s = ss.insertSheet(name);
+    if (headers &amp;&amp; headers.length) {
+      s.appendRow(headers);
+      s.getRange(&#x27;1:1&#x27;).setFontWeight(&#x27;bold&#x27;).setBackground(&#x27;#2C3E35&#x27;).setFontColor(&#x27;#fff&#x27;);
+      s.setFrozenRows(1);
+    }
   }
-  <span class="kw">return</span> s;
+  return s;
 }
 
-<span class="cm">// 確保 Sheet 有這個商品欄，沒有就在 FIXED_BACK 前面插入</span>
-<span class="kw">function</span> <span class="fn">ensureProductCol</span>(sheet, colName) {
-  <span class="kw">const</span> headers = sheet.<span class="fn">getRange</span>(1, 1, 1, sheet.<span class="fn">getLastColumn</span>()).<span class="fn">getValues</span>()[0];
-  <span class="kw">if</span> (headers.<span class="fn">includes</span>(colName)) <span class="kw">return</span>;
-  <span class="cm">// 找到 FIXED_BACK 第一欄（結帳金額）的位置，插入在它之前</span>
-  <span class="kw">const</span> insertBefore = headers.<span class="fn">indexOf</span>(FIXED_BACK[0]);
-  <span class="kw">const</span> insertCol = (insertBefore >= 0 ? insertBefore : headers.length) + 1;
-  sheet.<span class="fn">insertColumnBefore</span>(insertCol);
-  sheet.<span class="fn">getRange</span>(1, insertCol).<span class="fn">setValue</span>(colName)
-    .<span class="fn">setFontWeight</span>(<span class="str">'bold'</span>).<span class="fn">setBackground</span>(<span class="str">'#2C3E35'</span>).<span class="fn">setFontColor</span>(<span class="str">'#fff'</span>);
+function doGet(e) {
+  try {
+    const name = (e.parameter || {}).sheet || &#x27;&#x27;;
+    // ping 測試：無 sheet 參數時直接回傳連線成功
+    if (!name) return json({ status: &#x27;ok&#x27;, msg: &#x27;連線成功（通用版 GAS）&#x27; });
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const s = ss.getSheetByName(name);
+    if (!s) return json({ status: &#x27;ok&#x27;, rows: [] });
+    const values = s.getDataRange().getValues();
+    const headers = values[0] || [];
+    const rows = values.slice(1).map(r =&gt; {
+      const o = {};
+      headers.forEach((h, i) =&gt; o[h] = r[i]);
+      return o;
+    });
+    return json({ status: &#x27;ok&#x27;, headers, rows });
+  } catch (err) { return json({ status: &#x27;error&#x27;, msg: err.message }); }
 }
 
-<span class="kw">function</span> <span class="fn">doPost</span>(e) {
-  <span class="kw">try</span> {
-    <span class="kw">const</span> d = JSON.<span class="fn">parse</span>(e.postData.contents);
-    <span class="kw">const</span> qty = d.itemQty || {};
-    <span class="kw">const</span> sheet = <span class="fn">getOrCreateSheet</span>();
+function doPost(e) {
+  try {
+    const d = JSON.parse(e.postData.contents);
+    const s = getOrCreate(d.sheet, d.headers || []);
 
-    <span class="cm">// 確保所有本次訂單的商品欄都存在</span>
-    <span class="fn">Object</span>.<span class="fn">keys</span>(qty).<span class="fn">forEach</span>(col => <span class="fn">ensureProductCol</span>(sheet, col));
+    if (d.append) {
+      // 新增一列模式（銷售記錄）
+      const headers = s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getValues()[0];
+      // 自動新增尚未存在的商品欄位
+      if (d.ensureCols) {
+        d.ensureCols.forEach(col =&gt; {
+          if (!headers.includes(col)) {
+            const idx = headers.indexOf(d.insertBefore || &#x27;結帳金額&#x27;);
+            const at = (idx &gt;= 0 ? idx : headers.length) + 1;
+            s.insertColumnBefore(at);
+            s.getRange(1, at).setValue(col)
+              .setFontWeight(&#x27;bold&#x27;).setBackground(&#x27;#2C3E35&#x27;).setFontColor(&#x27;#fff&#x27;);
+            headers.splice(at - 1, 0, col);
+          }
+        });
+      }
+      s.appendRow(headers.map(h =&gt; d.row[h] !== undefined ? d.row[h] : &#x27;&#x27;));
+      return json({ status: &#x27;ok&#x27; });
+    }
 
-    <span class="cm">// 重新讀取最新欄位順序</span>
-    <span class="kw">const</span> headers = sheet.<span class="fn">getRange</span>(1, 1, 1, sheet.<span class="fn">getLastColumn</span>()).<span class="fn">getValues</span>()[0];
-
-    <span class="cm">// 依欄位順序組出這筆資料</span>
-    <span class="kw">const</span> fixedData = {
-      <span class="str">'日期'</span>: d.date, <span class="str">'時間'</span>: d.time, <span class="str">'院區'</span>: d.clinic||<span class="str">''</span>,
-      <span class="str">'顧客姓名'</span>: d.customer, <span class="str">'身分證遮罩'</span>: d.idMask||<span class="str">''</span>, <span class="str">'病歷號'</span>: d.phone||<span class="str">''</span>,
-      <span class="str">'當班醫師'</span>: d.doctor, <span class="str">'櫃檯人員'</span>: d.staff||<span class="str">''</span>,
-      <span class="str">'結帳金額'</span>: d.total, <span class="str">'付款方式'</span>: d.payMethod,
-      <span class="str">'醫師抽成'</span>: d.doctorComm||0, <span class="str">'員工抽成'</span>: d.staffComm||0,
-      <span class="str">'藥師抽成'</span>: d.pharmaComm||0, <span class="str">'身分證雜湊'</span>: d.idHash||<span class="str">''</span>
-    };
-    <span class="kw">const</span> row = headers.<span class="fn">map</span>(h => qty[h] !== undefined ? qty[h] : (fixedData[h] !== undefined ? fixedData[h] : <span class="str">''</span>));
-    sheet.<span class="fn">appendRow</span>(row);
-    <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'ok'</span>});
-  } <span class="kw">catch</span>(err) { <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'error'</span>,msg:err.message}); }
+    // 覆寫整頁模式（商品 / 人員 / 院區）
+    s.clearContents();
+    if (d.headers &amp;&amp; d.headers.length) {
+      s.appendRow(d.headers);
+      s.getRange(&#x27;1:1&#x27;).setFontWeight(&#x27;bold&#x27;).setBackground(&#x27;#2C3E35&#x27;).setFontColor(&#x27;#fff&#x27;);
+      s.setFrozenRows(1);
+    }
+    (d.rows || []).forEach(row =&gt; {
+      s.appendRow((d.headers || []).map(h =&gt; row[h] !== undefined ? row[h] : &#x27;&#x27;));
+    });
+    return json({ status: &#x27;ok&#x27;, count: (d.rows || []).length });
+  } catch (err) { return json({ status: &#x27;error&#x27;, msg: err.message }); }
 }
 
-<span class="kw">function</span> <span class="fn">doGet</span>(e) {
-  <span class="kw">const</span> p = (e||{}).parameter||{};
-  <span class="kw">if</span> (p.action===<span class="str">'query'</span>&&p.idHash) {
-    <span class="kw">try</span> {
-      <span class="kw">const</span> sheet = <span class="fn">getOrCreateSheet</span>();
-      <span class="kw">const</span> rows = sheet.<span class="fn">getDataRange</span>().<span class="fn">getValues</span>(), hdrs = rows[0];
-      <span class="kw">const</span> HC = hdrs.<span class="fn">indexOf</span>(<span class="str">'身分證雜湊'</span>);
-      <span class="kw">const</span> productCols = hdrs.<span class="fn">filter</span>(h => !FIXED_FRONT.<span class="fn">includes</span>(h) && !FIXED_BACK.<span class="fn">includes</span>(h));
-      <span class="kw">const</span> records = rows.<span class="fn">slice</span>(1).<span class="fn">filter</span>(r=>r[HC]===p.idHash).<span class="fn">map</span>(r=>{
-        <span class="kw">const</span> o={}; hdrs.<span class="fn">forEach</span>((h,i)=>o[h]=r[i]);
-        o.items = productCols.<span class="fn">filter</span>(c=>o[c]>0).<span class="fn">map</span>(c=>`${c}×${o[c]}`).<span class="fn">join</span>(<span class="str">'、'</span>);
-        o.date=o[<span class="str">'日期'</span>]; o.time=o[<span class="str">'時間'</span>]; o.clinic=o[<span class="str">'院區'</span>]; o.customer=o[<span class="str">'顧客姓名'</span>];
-        o.doctor=o[<span class="str">'當班醫師'</span>]; o.staff=o[<span class="str">'櫃檯人員'</span>]; o.total=o[<span class="str">'結帳金額'</span>]; o.payMethod=o[<span class="str">'付款方式'</span>];
-        <span class="kw">return</span> o;
-      });
-      <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'ok'</span>,records});
-    } <span class="kw">catch</span>(err){<span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'error'</span>,msg:err.message});}
-  }
-  <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'ok'</span>,msg:<span class="str">'連線成功（動態欄位版）'</span>});
-}
-<span class="kw">function</span> <span class="fn">json</span>(o){<span class="kw">return</span> ContentService.<span class="fn">createTextOutput</span>(JSON.<span class="fn">stringify</span>(o)).<span class="fn">setMimeType</span>(ContentService.MimeType.JSON);}</div>
+function json(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}</div>
+
+
       <div style="font-size:10px;font-weight:700;color:#888;margin:14px 0 5px;letter-spacing:.4px;">🔗 Apps Script 網頁應用程式 URL</div>
       <div class="input-row">
         <div class="fg"><input type="text" id="gsUrlInput" placeholder="https://script.google.com/macros/s/xxxxx/exec"></div>
@@ -451,16 +490,31 @@ tbody tr:hover td{background:var(--sage-pale);}
       <div id="gsStatus"></div>
     </div>
 
+    <!-- CLINICS -->
+    <div class="sc">
+      <h3>🏥 院區清單</h3>
+      <p>新增或刪除前台可選擇的院區，儲存後自動同步至 Google Sheet，所有前台即時生效。</p>
+      <div class="staff-add-row" style="margin-bottom:10px;">
+        <input type="text" id="newClinicInput" placeholder="輸入院區名稱（例：新竹院區）" onkeydown="if(event.key==='Enter')addClinic()" style="flex:1;">
+        <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addClinic()">＋</button>
+      </div>
+      <div class="chip-list" id="clinicChipList"></div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveClinics()">💾 儲存並同步至 Google Sheet</button>
+        <span id="clinicSaveMsg" style="font-size:11px;color:var(--sage);"></span>
+      </div>
+    </div>
+
     <!-- STAFF -->
     <div class="sc">
-      <h3>👥 醫師與人員名單</h3>
-      <p>新增或刪除前台可選擇的醫師與櫃檯人員，儲存後前台即時生效。</p>
-      <div class="two-col">
+      <h3>👥 工作人員名單</h3>
+      <p>新增或刪除前台可選擇的各類人員，儲存後自動同步至 Google Sheet，所有院區前台即時生效。</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div>
-          <div style="font-size:11px;font-weight:700;color:var(--brown);margin-bottom:8px;">👨‍⚕️ 醫師名單</div>
+          <div style="font-size:11px;font-weight:700;color:var(--brown);margin-bottom:8px;">👨‍⚕️ 醫師</div>
           <div class="staff-add-row">
-            <input type="text" id="newDoctorInput" placeholder="輸入醫師姓名" onkeydown="if(event.key==='Enter')addPerson('doctor')">
-            <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addPerson('doctor')">＋</button>
+            <input type="text" id="newDoctorInput" placeholder="輸入醫師姓名" onkeydown="if(event.key==='Enter')addPerson('doctors')">
+            <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addPerson('doctors')">＋</button>
           </div>
           <div class="chip-list" id="doctorList"></div>
         </div>
@@ -472,9 +526,25 @@ tbody tr:hover td{background:var(--sage-pale);}
           </div>
           <div class="chip-list" id="staffList"></div>
         </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--brown);margin-bottom:8px;">👩‍⚕️ 護理師</div>
+          <div class="staff-add-row">
+            <input type="text" id="newNurseInput" placeholder="輸入護理師姓名" onkeydown="if(event.key==='Enter')addPerson('nurses')">
+            <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addPerson('nurses')">＋</button>
+          </div>
+          <div class="chip-list" id="nurseList"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--brown);margin-bottom:8px;">💊 藥師</div>
+          <div class="staff-add-row">
+            <input type="text" id="newPharmaInput" placeholder="輸入藥師姓名" onkeydown="if(event.key==='Enter')addPerson('pharmas')">
+            <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addPerson('pharmas')">＋</button>
+          </div>
+          <div class="chip-list" id="pharmaList"></div>
+        </div>
       </div>
-      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
-        <button class="btn btn-primary" onclick="saveStaff()">💾 儲存名單</button>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveStaff()">💾 儲存並同步至 Google Sheet</button>
         <span id="staffSaveMsg" style="font-size:11px;color:var(--sage);"></span>
       </div>
     </div>
@@ -538,7 +608,7 @@ tbody tr:hover td{background:var(--sage-pale);}
 
 <script>
 // ── KEYS ──
-const SALES_KEY='clinicSalesLog',GS_KEY='gsUrl',PIN_KEY='adminPin',STAFF_KEY='clinicStaff',PRODUCTS_KEY='clinicProducts';
+const SALES_KEY='clinicSalesLog',GS_KEY='gsUrl',PIN_KEY='adminPin',STAFF_KEY='clinicStaff',PRODUCTS_KEY='clinicProducts',CLINIC_KEY='clinicClinics',PROMO_KEY='clinicPromos';
 const DEFAULT_PIN='1234';
 
 // ── DEFAULT PRODUCTS ──
@@ -567,8 +637,31 @@ const DEFAULT_PRODUCTS=[
   {cat:'其他營養',id:'o3',emoji:'🔵',name:'複方蛋白粉',price:1100,group:'other',active:true},
 ];
 
+
+/* ── GAS 通用 API 輔助函數 ── */
+function gasUrl(){return (typeof APP_CONFIG!=='undefined'?APP_CONFIG.GAS_URL:null)||localStorage.getItem(GS_KEY)||'';}
+async function gasRead(sheet){
+  const r=await fetch(`${gasUrl()}?sheet=${encodeURIComponent(sheet)}`);
+  return r.json();
+}
+async function gasWrite(sheet,headers,rows){
+  const r=await fetch(gasUrl(),{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({sheet,headers,rows})});
+  return r.json();
+}
+
 function getProducts(){try{const s=localStorage.getItem(PRODUCTS_KEY);return s?JSON.parse(s):[...DEFAULT_PRODUCTS];}catch(e){return[...DEFAULT_PRODUCTS];}}
-function saveProducts(p){localStorage.setItem(PRODUCTS_KEY,JSON.stringify(p));}
+function saveProducts(p, silent=false){
+  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(p));
+  if(!gasUrl()) return;
+  const PRODUCT_HDR=['id','cat','name','emoji','price','group','detail','badge','active'];
+  const rows=p.map(x=>({id:x.id||'',cat:x.cat||'',name:x.name||'',emoji:x.emoji||'',
+    price:x.price||0,group:x.group||'',detail:x.detail||'',badge:x.badge||'',
+    active:x.active===false?'FALSE':'TRUE'}));
+  gasWrite('商品主檔',PRODUCT_HDR,rows).then(d=>{
+    if(!silent) d.status==='ok'?toast('☁️ 商品已同步至 Google Sheet'):toast('⚠️ Sheet 同步失敗：'+d.msg);
+  }).catch(()=>{if(!silent)toast('⚠️ Sheet 同步網路錯誤');});
+}
 function getPin(){return localStorage.getItem(PIN_KEY)||DEFAULT_PIN;}
 
 // ── PIN ──
@@ -592,19 +685,20 @@ function logout(){document.getElementById('loginScreen').classList.remove('hidde
 // ── INIT ──
 function initApp(){
   renderStats();
-  loadStaffData();renderStaffLists();
+  loadClinicData();loadStaffData();renderStaffLists();
   renderProductManager();
-  const gsUrl=localStorage.getItem(GS_KEY)||'';
-  if(gsUrl){document.getElementById('gsUrlInput').value=gsUrl;document.getElementById('gsBadge').classList.add('show');}
+  const gsUrl = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.GAS_URL : null) || localStorage.getItem(GS_KEY) || '';
+  if (gsUrl) { document.getElementById('gsUrlInput').value=gsUrl; document.getElementById('gsBadge').classList.add('show'); }
   document.getElementById('statsDateLabel').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'short'})+' 銷售概覽';
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function switchPage(p){
-  ['stats','patient','products','settings'].forEach(n=>{
+  ['stats','patient','products','promos','settings'].forEach(n=>{
     document.getElementById('page'+cap(n)).classList.toggle('active',n===p);
     document.getElementById('nav'+cap(n)).classList.toggle('active',n===p);
   });
   if(p==='patient')connectAdminReader();
+  if(p==='promos')renderPromoList();
 }
 
 // ── STATS ──
@@ -941,25 +1035,266 @@ function savePmModal(){
 }
 
 // ── STAFF ──
-let editDoctors=[],editStaff=[];
-function loadStaffData(){
+
+/* ══════════════════════════════════════════
+   促銷活動管理
+   ══════════════════════════════════════════ */
+const PROMO_HEADERS=['id','name','type','scope','buyQty','freeQty','discountValue','active','startDate','endDate'];
+const PROMO_TYPE_LABEL={buyNgetN:'🎁 買N送N',fixedDiscount:'💰 固定折扣',percentDiscount:'📉 百分比折',bundle:'📦 套組定價'};
+
+let editPromos=[];
+
+function loadPromoData(){
+  try{const s=localStorage.getItem(PROMO_KEY);editPromos=s?JSON.parse(s):[];}catch(e){editPromos=[];}
+}
+
+function getDefaultPromos(){
+  return [
+    {id:'promo_protein_b6g1',name:'蛋白代餐買6送1',type:'buyNgetN',scope:'group:protein',buyQty:6,freeQty:1,discountValue:0,active:'TRUE',startDate:'',endDate:''},
+    {id:'promo_mct_b6g1',   name:'Q飽纖燃飲買6送1',type:'buyNgetN',scope:'group:mct',   buyQty:6,freeQty:1,discountValue:0,active:'TRUE',startDate:'',endDate:''},
+  ];
+}
+
+function renderPromoList(){
+  loadPromoData();
+  const el=document.getElementById('promoList');
+  if(!el)return;
+  if(!editPromos.length){
+    el.innerHTML=`<div style="text-align:center;padding:30px;color:#aaa;">
+      <div style="font-size:32px;margin-bottom:8px;">🏷️</div>
+      <p>尚無促銷活動</p>
+      <button class="btn btn-outline" style="margin-top:10px;" onclick="initDefaultPromos()">載入預設活動（買6送1）</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML=editPromos.map((p,i)=>`
+    <div class="pm-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:${p.active==='TRUE'||p.active===true?'#fff':'#f5f5f5'};border:1px solid #e0e8e2;margin-bottom:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13px;${p.active==='TRUE'||p.active===true?'':'color:#aaa;text-decoration:line-through;'}">${p.name}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px;">
+          ${PROMO_TYPE_LABEL[p.type]||p.type} ／ 範圍：${p.scope||'all'}
+          ${p.type==='buyNgetN'?` ／ 買${p.buyQty}送${p.freeQty}`:''}
+          ${(p.type==='fixedDiscount'||p.type==='percentDiscount')?` ／ 折扣值：${p.discountValue}${p.type==='percentDiscount'?'%':'元'}`:''}
+          ${p.type==='bundle'?` ／ 套組價：NT$${p.discountValue}`:''}
+          ${p.startDate||p.endDate?` ／ 期間：${p.startDate||'--'}～${p.endDate||'--'}`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick="togglePromo(${i})">${p.active==='TRUE'||p.active===true?'下架':'上架'}</button>
+        <button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick="openPromoModal(${i})">編輯</button>
+        <button class="btn" style="padding:4px 10px;font-size:11px;background:#fce4ec;color:#c62828;border:none;" onclick="deletePromo(${i})">刪除</button>
+      </div>
+    </div>`).join('');
+}
+
+function initDefaultPromos(){
+  editPromos=getDefaultPromos();
+  savePromos();
+  renderPromoList();
+}
+
+function togglePromo(i){
+  const p=editPromos[i];
+  p.active=(p.active==='TRUE'||p.active===true)?'FALSE':'TRUE';
+  savePromos();renderPromoList();
+}
+
+function deletePromo(i){
+  if(!confirm('確定刪除「'+editPromos[i].name+'」？'))return;
+  editPromos.splice(i,1);savePromos();renderPromoList();
+}
+
+function savePromos(){
+  localStorage.setItem(PROMO_KEY,JSON.stringify(editPromos));
+  if(!gasUrl())return;
+  const rows=editPromos.map(p=>({
+    id:p.id||'',name:p.name||'',type:p.type||'',scope:p.scope||'all',
+    buyQty:p.buyQty||0,freeQty:p.freeQty||0,discountValue:p.discountValue||0,
+    active:(p.active==='TRUE'||p.active===true)?'TRUE':'FALSE',
+    startDate:p.startDate||'',endDate:p.endDate||''
+  }));
+  gasWrite('促銷活動',PROMO_HEADERS,rows)
+    .then(d=>d.status==='ok'?toast('☁️ 促銷活動已同步至 Google Sheet'):toast('⚠️ 同步失敗：'+d.msg))
+    .catch(()=>toast('⚠️ Sheet 同步網路錯誤'));
+}
+
+// ── Promo Modal ──
+let editingPromoIdx=-1;
+function openPromoModal(idx){
+  editingPromoIdx=idx===undefined?-1:idx;
+  const p=editingPromoIdx>=0?editPromos[editingPromoIdx]:{};
+  const types=['buyNgetN','fixedDiscount','percentDiscount','bundle'];
+  document.getElementById('promoModalOverlay').classList.add('open');
+  document.getElementById('promoModalBody').innerHTML=`
+    <h3 style="margin:0 0 16px;">${editingPromoIdx>=0?'編輯':'新增'}促銷活動</h3>
+    <div style="display:grid;gap:10px;">
+      <div class="form-group">
+        <label style="font-size:11px;font-weight:700;">活動名稱</label>
+        <input class="fg-input" id="pm_name" value="${p.name||''}" placeholder="例：蛋白代餐買6送1">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:700;">活動類型</label>
+          <select class="fg-input" id="pm_type" onchange="promoTypeChanged()">
+            ${types.map(t=>`<option value="${t}"${p.type===t?' selected':''}>${PROMO_TYPE_LABEL[t]||t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:700;">適用範圍</label>
+          <input class="fg-input" id="pm_scope" value="${p.scope||'all'}" placeholder="all / group:protein / id:p1">
+        </div>
+      </div>
+      <div id="pm_extra" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:700;">開始日期（留空=永久）</label>
+          <input class="fg-input" type="date" id="pm_startDate" value="${p.startDate||''}">
+        </div>
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:700;">結束日期（留空=永久）</label>
+          <input class="fg-input" type="date" id="pm_endDate" value="${p.endDate||''}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="font-size:11px;font-weight:700;">狀態</label>
+        <select class="fg-input" id="pm_active">
+          <option value="TRUE"${(p.active==='TRUE'||p.active===true||!p.active)?' selected':''}>✅ 啟用</option>
+          <option value="FALSE"${(p.active==='FALSE'||p.active===false)?' selected':''}>⏸️ 停用</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closePromoModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePromoModal()">儲存</button>
+    </div>`;
+  promoTypeChanged();
+}
+
+function promoTypeChanged(){
+  const type=document.getElementById('pm_type')?.value;
+  const extra=document.getElementById('pm_extra');
+  if(!extra)return;
+  const p=editingPromoIdx>=0?editPromos[editingPromoIdx]:{};
+  if(type==='buyNgetN'){
+    extra.innerHTML=`
+      <div class="form-group"><label style="font-size:11px;font-weight:700;">買幾個（N）</label><input class="fg-input" type="number" id="pm_buyQty" value="${p.buyQty||6}" min="1"></div>
+      <div class="form-group"><label style="font-size:11px;font-weight:700;">送幾個（N）</label><input class="fg-input" type="number" id="pm_freeQty" value="${p.freeQty||1}" min="1"></div>`;
+  } else if(type==='fixedDiscount'){
+    extra.innerHTML=`<div class="form-group" style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;">折扣金額（元）</label><input class="fg-input" type="number" id="pm_discountValue" value="${p.discountValue||0}" min="0"></div>`;
+  } else if(type==='percentDiscount'){
+    extra.innerHTML=`<div class="form-group" style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;">折後百分比（例：九折填90，八五折填85）</label><input class="fg-input" type="number" id="pm_discountValue" value="${p.discountValue||90}" min="1" max="99"></div>`;
+  } else if(type==='bundle'){
+    extra.innerHTML=`<div class="form-group" style="grid-column:1/-1;"><label style="font-size:11px;font-weight:700;">套組固定售價（元）</label><input class="fg-input" type="number" id="pm_discountValue" value="${p.discountValue||0}" min="0"></div>`;
+  } else { extra.innerHTML=''; }
+}
+
+function savePromoModal(){
+  const name=document.getElementById('pm_name').value.trim();
+  if(!name){toast('⚠️ 請填寫活動名稱');return;}
+  const type=document.getElementById('pm_type').value;
+  const buyQty=parseInt(document.getElementById('pm_buyQty')?.value)||0;
+  const freeQty=parseInt(document.getElementById('pm_freeQty')?.value)||0;
+  const discountValue=parseFloat(document.getElementById('pm_discountValue')?.value)||0;
+  const promo={
+    id: editingPromoIdx>=0 ? editPromos[editingPromoIdx].id : 'promo_'+Date.now(),
+    name, type,
+    scope: document.getElementById('pm_scope').value.trim()||'all',
+    buyQty, freeQty, discountValue,
+    active: document.getElementById('pm_active').value,
+    startDate: document.getElementById('pm_startDate').value,
+    endDate:   document.getElementById('pm_endDate').value,
+  };
+  if(editingPromoIdx>=0) editPromos[editingPromoIdx]=promo;
+  else editPromos.push(promo);
+  savePromos();renderPromoList();closePromoModal();
+  toast('✅ 促銷活動已儲存');
+}
+
+function closePromoModal(){document.getElementById('promoModalOverlay').classList.remove('open');}
+
+const DEFAULT_CLINICS=['鶯歌院區','三樹院區','樹林院區','桃園院區','土城院區','八德院區','龍潭院區','大溪院區','大竹院區','大浦院區','平鎮院區','埔心院區'];
+let editClinics=[];
+function loadClinicData(){
+  const s=localStorage.getItem(CLINIC_KEY);
+  editClinics=s?JSON.parse(s):[...DEFAULT_CLINICS];
+  renderClinicChips();
+}
+function renderClinicChips(){
+  const el=document.getElementById('clinicChipList');
+  if(!el)return;
+  el.innerHTML=editClinics.map((n,i)=>`<span class="chip">${n}<button class="chip-del" onclick="removeClinic(${i})">×</button></span>`).join('');
+}
+function addClinic(){
+  const v=document.getElementById('newClinicInput').value.trim();if(!v)return;
+  if(editClinics.includes(v)){toast('⚠️ 已存在');return;}
+  editClinics.push(v);document.getElementById('newClinicInput').value='';renderClinicChips();
+}
+function removeClinic(i){editClinics.splice(i,1);renderClinicChips();}
+function saveClinics(){
+  localStorage.setItem(CLINIC_KEY,JSON.stringify(editClinics));
+  const gasUrl=(typeof APP_CONFIG!=='undefined'?APP_CONFIG.GAS_URL:null)||localStorage.getItem(GS_KEY)||'';
+  if(gasUrl()){
+    const rows=editClinics.map(c=>({'院區名稱':c}));
+    gasWrite('院區清單',['院區名稱'],rows).then(d=>d.status==='ok'?toast('☁️ 院區清單已同步至 Google Sheet'):toast('⚠️ 同步失敗：'+d.msg))
+      .catch(()=>toast('⚠️ 網路錯誤'));
+  } else { toast('✅ 院區清單已儲存'); }
+  const m=document.getElementById('clinicSaveMsg');m.textContent='✅ 已儲存！';setTimeout(()=>m.textContent='',3000);
+}
+let editStaffData={doctors:[],staff:[],nurses:[],pharmas:[]};
+const ROLE_INPUT={doctors:'newDoctorInput',staff:'newStaffInput',nurses:'newNurseInput',pharmas:'newPharmaInput'};
+const ROLE_LIST={doctors:'doctorList',staff:'staffList',nurses:'nurseList',pharmas:'pharmaList'};
+
+async function loadStaffData(){
+  // 先用本機快取顯示，背景從 GAS 更新
   const s=localStorage.getItem(STAFF_KEY);
-  if(s){const d=JSON.parse(s);editDoctors=[...(d.doctors||[])];editStaff=[...(d.staff||[])];}
-  else{editDoctors=[];editStaff=[];}
+  if(s){const d=JSON.parse(s);editStaffData={doctors:[...(d.doctors||[])],staff:[...(d.staff||[])],nurses:[...(d.nurses||[])],pharmas:[...(d.pharmas||[])]};}
+  renderStaffLists();
+  // 背景同步 GAS 最新資料
+  if(gasUrl()){
+    try{
+      const [sd,cd,pmd]=await Promise.all([gasRead('人員名單'),gasRead('院區清單'),gasRead('促銷活動')]);
+      if(sd.status==='ok'&&sd.rows){
+        const staff={doctors:[],staff:[],nurses:[],pharmas:[]};
+        sd.rows.forEach(r=>{const role=r['角色'],name=String(r['姓名']||'').trim();if(staff[role]!==undefined&&name)staff[role].push(name);});
+        editStaffData=staff;localStorage.setItem(STAFF_KEY,JSON.stringify(staff));renderStaffLists();
+      }
+      if(cd.status==='ok'&&cd.rows){
+        const clinics=cd.rows.map(r=>String(r['院區名稱']||'').trim()).filter(Boolean);
+        if(clinics.length){editClinics=clinics;localStorage.setItem(CLINIC_KEY,JSON.stringify(clinics));renderClinicChips();}
+      }
+      if(pmd.status==='ok'&&pmd.rows){
+        const promos=pmd.rows.map(r=>({...r,buyQty:Number(r.buyQty)||0,freeQty:Number(r.freeQty)||0,discountValue:Number(r.discountValue)||0}));
+        localStorage.setItem(PROMO_KEY,JSON.stringify(promos));
+        editPromos=promos;
+      }
+    }catch(e){console.warn('[staff/clinics/promos] GAS 同步失敗，使用本機快取');}
+  }
 }
-function renderStaffLists(){renderChips('doctorList',editDoctors,'doctor');renderChips('staffList',editStaff,'staff');}
-function renderChips(id,list,type){document.getElementById(id).innerHTML=list.map((n,i)=>`<span class="chip">${n}<button class="chip-del" onclick="removePerson('${type}',${i})">×</button></span>`).join('');}
-function addPerson(type){
-  const id=type==='doctor'?'newDoctorInput':'newStaffInput';
-  const v=document.getElementById(id).value.trim();if(!v)return;
-  if(type==='doctor'){if(editDoctors.includes(v)){toast('⚠️ 已存在');return;}editDoctors.push(v);}
-  else{if(editStaff.includes(v)){toast('⚠️ 已存在');return;}editStaff.push(v);}
-  document.getElementById(id).value='';renderStaffLists();
+function renderStaffLists(){
+  Object.entries(ROLE_LIST).forEach(([role,listId])=>renderChips(listId,editStaffData[role],role));
 }
-function removePerson(type,i){if(type==='doctor')editDoctors.splice(i,1);else editStaff.splice(i,1);renderStaffLists();}
+function renderChips(id,list,role){document.getElementById(id).innerHTML=(list||[]).map((n,i)=>`<span class="chip">${n}<button class="chip-del" onclick="removePerson('${role}',${i})">×</button></span>`).join('');}
+function addPerson(role){
+  const inputId=ROLE_INPUT[role];const v=document.getElementById(inputId).value.trim();if(!v)return;
+  if(!editStaffData[role])editStaffData[role]=[];
+  if(editStaffData[role].includes(v)){toast('⚠️ 已存在');return;}
+  editStaffData[role].push(v);document.getElementById(inputId).value='';renderStaffLists();
+}
+function removePerson(role,i){editStaffData[role].splice(i,1);renderStaffLists();}
 function saveStaff(){
-  localStorage.setItem(STAFF_KEY,JSON.stringify({doctors:editDoctors,staff:editStaff}));
-  const m=document.getElementById('staffSaveMsg');m.textContent='✅ 已儲存，前台即時生效！';toast('✅ 人員名單已更新');setTimeout(()=>m.textContent='',3000);
+  localStorage.setItem(STAFF_KEY,JSON.stringify(editStaffData));
+  // 同步至 Google Sheet
+  if(gasUrl()){
+    const STAFF_ROLES=['doctors','staff','nurses','pharmas'];
+    const rows=[];
+    STAFF_ROLES.forEach(role=>(editStaffData[role]||[]).forEach(name=>rows.push({'角色':role,'姓名':name})));
+    gasWrite('人員名單',['角色','姓名'],rows).then(d=>{
+      d.status==='ok'?toast('☁️ 人員名單已同步至 Google Sheet'):toast('⚠️ Sheet 同步失敗：'+d.msg);
+    }).catch(()=>toast('⚠️ Sheet 同步網路錯誤'));
+  } else {
+    toast('✅ 人員名單已儲存（未設定 GAS URL）');
+  }
+  const m=document.getElementById('staffSaveMsg');m.textContent='✅ 已儲存！';setTimeout(()=>m.textContent='',3000);
 }
 
 // ── GS ──
@@ -967,7 +1302,11 @@ function saveGs(){const u=document.getElementById('gsUrlInput').value.trim();if(
 async function testGs(){
   const u=document.getElementById('gsUrlInput').value.trim();if(!u){toast('⚠️ 請先輸入 URL');return;}
   setGsS('pending','🔄 測試中...');
-  try{const res=await fetch(u);const d=await res.json();d.status==='ok'?setGsS('ok','✅ 連線成功！'):setGsS('err','❌ 回應異常');}catch(e){setGsS('err','❌ 連線失敗：'+e.message);}
+  try{
+    const res=await fetch(u+'?ping=1');
+    const d=await res.json();
+    d.status==='ok'?setGsS('ok','✅ 連線成功！'):setGsS('err','❌ 回應異常：'+JSON.stringify(d));
+  }catch(e){setGsS('err','❌ 連線失敗：'+e.message);}
 }
 function setGsS(t,m){const c=t==='ok'?'pill-ok':t==='err'?'pill-err':'pill-pending';document.getElementById('gsStatus').innerHTML=`<span class="status-pill ${c}">${m}</span>`;}
 
@@ -984,86 +1323,96 @@ function changePin(){
 
 // ── COPY SCRIPT (動態欄位版) ──
 function copyScript(){
-  const code=`// 擇木良食 × 金鶯診所｜銷售記錄接收器（動態欄位版）
-// 新增商品後不需重新部署，doPost 會自動偵測並在 Sheet 新增欄位
-const SHEET_NAME = '銷售紀錄';
-const FIXED_FRONT = ['日期','時間','院區','顧客姓名','身分證遮罩','病歷號','當班醫師','櫃檯人員'];
-const FIXED_BACK  = ['結帳金額','付款方式','醫師抽成','員工抽成','藥師抽成','身分證雜湊'];
+  const code=`// 擇木良食 × 金鶯診所｜通用版 GAS（只需部署一次，永遠不用改）
+// ─────────────────────────────────────────────────────────────
+// doGet?sheet=工作頁名稱           → 讀取整頁所有資料（JSON）
+// doPost {sheet, headers, rows}    → 覆寫整頁（商品/人員/院區）
+// doPost {sheet, row, append:true} → 新增一列（銷售記錄）
+// ─────────────────────────────────────────────────────────────
+// 工作頁名稱（前後台 JS 定義，GAS 完全不需知道）：
+//   銷售紀錄 / 商品主檔 / 人員名單 / 院區清單
 
-function getOrCreateSheet() {
+function getOrCreate(name, headers) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let s = ss.getSheetByName(SHEET_NAME);
+  let s = ss.getSheetByName(name);
   if (!s) {
-    s = ss.insertSheet(SHEET_NAME);
-    s.appendRow([...FIXED_FRONT, ...FIXED_BACK]);
-    s.getRange('1:1').setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
-    s.setFrozenRows(1);
+    s = ss.insertSheet(name);
+    if (headers && headers.length) {
+      s.appendRow(headers);
+      s.getRange('1:1').setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+      s.setFrozenRows(1);
+    }
   }
   return s;
 }
 
-// 確保 Sheet 有這個商品欄，沒有就插入在 FIXED_BACK 前面
-function ensureProductCol(sheet, colName) {
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  if (headers.includes(colName)) return;
-  const insertBefore = headers.indexOf(FIXED_BACK[0]);
-  const insertCol = (insertBefore >= 0 ? insertBefore : headers.length) + 1;
-  sheet.insertColumnBefore(insertCol);
-  sheet.getRange(1, insertCol).setValue(colName)
-    .setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+function doGet(e) {
+  try {
+    const p = e.parameter || {};
+    const name = p.sheet || '';
+    // ping 測試：無 sheet 參數時直接回傳連線成功
+    if (!name) return json({ status: 'ok', msg: '連線成功（通用版 GAS）' });
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const s = ss.getSheetByName(name);
+    if (!s) return json({ status: 'ok', rows: [] });
+    const values = s.getDataRange().getValues();
+    const headers = values[0] || [];
+    const rows = values.slice(1).map(r => {
+      const o = {};
+      headers.forEach((h, i) => o[h] = r[i]);
+      return o;
+    });
+    return json({ status: 'ok', headers, rows });
+  } catch (err) { return json({ status: 'error', msg: err.message }); }
 }
 
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
-    const qty = d.itemQty || {};
-    const sheet = getOrCreateSheet();
+    const s = getOrCreate(d.sheet, d.headers || []);
 
-    // 確保所有本次訂單的商品欄都存在（新商品自動新增欄位）
-    Object.keys(qty).forEach(col => ensureProductCol(sheet, col));
+    if (d.append) {
+      // 新增一列模式（銷售記錄）
+      const headers = s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getValues()[0];
+      // 自動新增尚未存在的商品欄位
+      if (d.ensureCols) {
+        d.ensureCols.forEach(col => {
+          if (!headers.includes(col)) {
+            const idx = headers.indexOf(d.insertBefore || '結帳金額');
+            const at = (idx >= 0 ? idx : headers.length) + 1;
+            s.insertColumnBefore(at);
+            s.getRange(1, at).setValue(col)
+              .setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+            headers.splice(at - 1, 0, col);
+          }
+        });
+      }
+      s.appendRow(headers.map(h => d.row[h] !== undefined ? d.row[h] : ''));
+      return json({ status: 'ok' });
+    }
 
-    // 重新讀取最新欄位順序，依序填入資料
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const fixedData = {
-      '日期': d.date, '時間': d.time, '院區': d.clinic||'',
-      '顧客姓名': d.customer, '身分證遮罩': d.idMask||'', '病歷號': d.phone||'',
-      '當班醫師': d.doctor, '櫃檯人員': d.staff||'',
-      '結帳金額': d.total, '付款方式': d.payMethod,
-      '醫師抽成': d.doctorComm||0, '員工抽成': d.staffComm||0,
-      '藥師抽成': d.pharmaComm||0, '身分證雜湊': d.idHash||''
-    };
-    const row = headers.map(h => qty[h] !== undefined ? qty[h] : (fixedData[h] !== undefined ? fixedData[h] : ''));
-    sheet.appendRow(row);
-    return json({status:'ok'});
-  } catch(err) { return json({status:'error',msg:err.message}); }
-}
-
-function doGet(e) {
-  const p = (e||{}).parameter||{};
-  if (p.action==='query' && p.idHash) {
-    try {
-      const sheet = getOrCreateSheet();
-      const rows = sheet.getDataRange().getValues(), hdrs = rows[0];
-      const HC = hdrs.indexOf('身分證雜湊');
-      const productCols = hdrs.filter(h => !FIXED_FRONT.includes(h) && !FIXED_BACK.includes(h));
-      const records = rows.slice(1).filter(r=>r[HC]===p.idHash).map(r=>{
-        const o={}; hdrs.forEach((h,i)=>o[h]=r[i]);
-        o.items = productCols.filter(c=>o[c]>0).map(c=>\`\${c}×\${o[c]}\`).join('、');
-        o.date=o['日期']; o.time=o['時間']; o.clinic=o['院區']; o.customer=o['顧客姓名'];
-        o.doctor=o['當班醫師']; o.staff=o['櫃檯人員']; o.total=o['結帳金額']; o.payMethod=o['付款方式'];
-        return o;
-      });
-      return json({status:'ok', records});
-    } catch(err) { return json({status:'error',msg:err.message}); }
-  }
-  return json({status:'ok', msg:'連線成功（動態欄位版）'});
+    // 覆寫整頁模式（商品 / 人員 / 院區）
+    s.clearContents();
+    if (d.headers && d.headers.length) {
+      s.appendRow(d.headers);
+      s.getRange('1:1').setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+      s.setFrozenRows(1);
+    }
+    (d.rows || []).forEach(row => {
+      s.appendRow((d.headers || []).map(h => row[h] !== undefined ? row[h] : ''));
+    });
+    return json({ status: 'ok', count: (d.rows || []).length });
+  } catch (err) { return json({ status: 'error', msg: err.message }); }
 }
 
 function json(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }`;
-  navigator.clipboard.writeText(code).then(()=>toast('✅ 程式碼已複製（動態欄位版）'));
+  navigator.clipboard.writeText(code).then(()=>toast('✅ GAS 程式碼已複製（通用版）'));
 }
+
+
+
 
 // ── TOAST ──
 function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.getElementById('toastWrap').appendChild(el);setTimeout(()=>el.remove(),3000);}
@@ -1071,5 +1420,176 @@ function toast(msg){const el=document.createElement('div');el.className='toast';
 // Auto-refresh
 setInterval(()=>{if(document.getElementById('appShell').classList.contains('visible'))renderStats();},30000);
 </script>
+
+  <!-- Promo Modal -->
+  <div id="promoModalOverlay" class="pm-overlay" onclick="if(event.target===this)closePromoModal()">
+    <div class="pm-modal" id="promoModalBody" style="max-width:560px;"></div>
+  </div>
 </body>
 </html>
+function copyScript(){
+  const code=`// 擇木良食 × 金鶯診所｜GAS（商品主檔 + 人員名單 + 院區 + 銷售記錄）
+// 同一 Google Sheet，四個工作頁：銷售紀錄 / 商品主檔 / 人員名單 / 院區清單
+const SALES_SHEET   = '銷售紀錄';
+const PRODUCT_SHEET = '商品主檔';
+const STAFF_SHEET   = '人員名單';
+const CLINIC_SHEET  = '院區清單';
+const FIXED_FRONT = ['日期','時間','院區','顧客姓名','身分證遮罩','病歷號','當班醫師','櫃檯人員'];
+const FIXED_BACK  = ['結帳金額','付款方式','醫師抽成','員工抽成','藥師抽成','身分證雜湊'];
+const PRODUCT_HDR = ['id','cat','name','emoji','price','group','detail','badge','active'];
+const STAFF_ROLES = ['doctors','staff','nurses','pharmas'];
+
+function styleHdr(s){s.getRange('1:1').setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');}
+function getSalesSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let s=ss.getSheetByName(SALES_SHEET);
+  if(!s){s=ss.insertSheet(SALES_SHEET);s.appendRow([...FIXED_FRONT,...FIXED_BACK]);styleHdr(s);s.setFrozenRows(1);}
+  return s;
+}
+function getProductSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let s=ss.getSheetByName(PRODUCT_SHEET);
+  if(!s){s=ss.insertSheet(PRODUCT_SHEET);s.appendRow(PRODUCT_HDR);styleHdr(s);s.setFrozenRows(1);}
+  return s;
+}
+function getStaffSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let s=ss.getSheetByName(STAFF_SHEET);
+  if(!s){
+    s=ss.insertSheet(STAFF_SHEET);
+    s.appendRow(['角色','姓名']);
+    styleHdr(s);s.setFrozenRows(1);
+    // 角色欄填入：doctors / staff / nurses / pharmas
+  }
+  return s;
+}
+function getClinicSheet(){
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  let s=ss.getSheetByName(CLINIC_SHEET);
+  if(!s){
+    s=ss.insertSheet(CLINIC_SHEET);
+    s.appendRow(['院區名稱']);
+    styleHdr(s);s.setFrozenRows(1);
+    // 每列填一個院區名稱，例：鶯歌院區
+  }
+  return s;
+}
+function ensureCol(sheet,col){
+  const h=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+  if(h.includes(col))return;
+  const pos=h.indexOf(FIXED_BACK[0]);
+  const c=(pos>=0?pos:h.length)+1;
+  sheet.insertColumnBefore(c);
+  sheet.getRange(1,c).setValue(col).setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+}
+
+function doPost(e) {
+  try {
+    const d=JSON.parse(e.postData.contents);
+
+    // ① 商品主檔
+    if(d.action==='saveProducts'){
+      const s=getProductSheet();
+      s.clearContents();s.appendRow(PRODUCT_HDR);styleHdr(s);
+      d.products.forEach(p=>s.appendRow([
+        p.id||'',p.cat||'',p.name||'',p.emoji||'',p.price||0,
+        p.group||'',p.detail||'',p.badge||'',p.active===false?'FALSE':'TRUE'
+      ]));
+      return json({status:'ok',count:d.products.length});
+    }
+
+    // ② 人員名單
+    if(d.action==='saveStaff'){
+      const s=getStaffSheet();
+      s.clearContents();s.appendRow(['角色','姓名']);styleHdr(s);
+      STAFF_ROLES.forEach(role=>(d.staff[role]||[]).forEach(name=>s.appendRow([role,name])));
+      return json({status:'ok'});
+    }
+
+    // ③ 院區清單
+    if(d.action==='saveClinics'){
+      const s=getClinicSheet();
+      s.clearContents();s.appendRow(['院區名稱']);styleHdr(s);
+      (d.clinics||[]).forEach(c=>s.appendRow([c]));
+      return json({status:'ok',count:(d.clinics||[]).length});
+    }
+
+    // ④ 銷售記錄
+    const qty=d.itemQty||{},sheet=getSalesSheet();
+    Object.keys(qty).forEach(c=>ensureCol(sheet,c));
+    const hdrs=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+    const fd={
+      '日期':d.date,'時間':d.time,'院區':d.clinic||'','顧客姓名':d.customer,
+      '身分證遮罩':d.idMask||'','病歷號':d.phone||'','當班醫師':d.doctor,'櫃檯人員':d.staff||'',
+      '結帳金額':d.total,'付款方式':d.payMethod,
+      '醫師抽成':d.doctorComm||0,'員工抽成':d.staffComm||0,'藥師抽成':d.pharmaComm||0,'身分證雜湊':d.idHash||''
+    };
+    sheet.appendRow(hdrs.map(h=>qty[h]!==undefined?qty[h]:(fd[h]!==undefined?fd[h]:'')));
+    return json({status:'ok'});
+  } catch(err){return json({status:'error',msg:err.message});}
+}
+
+function doGet(e) {
+  const p=(e||{}).parameter||{};
+
+  // ① 商品主檔
+  if(p.action==='products'){
+    try{
+      const s=getProductSheet(),rows=s.getDataRange().getValues();
+      if(rows.length<=1)return json({status:'ok',products:[]});
+      const h=rows[0];
+      const products=rows.slice(1).map(r=>{
+        const o={};h.forEach((k,i)=>o[k]=r[i]);
+        o.price=Number(o.price)||0;
+        o.active=String(o.active).toUpperCase()!=='FALSE';
+        if(!o.detail)delete o.detail;if(!o.badge)delete o.badge;
+        return o;
+      });
+      return json({status:'ok',products});
+    }catch(err){return json({status:'error',msg:err.message});}
+  }
+
+  // ② 人員名單
+  if(p.action==='staff'){
+    try{
+      const rows=getStaffSheet().getDataRange().getValues();
+      const result={doctors:[],staff:[],nurses:[],pharmas:[]};
+      rows.slice(1).forEach(r=>{
+        const role=r[0],name=String(r[1]||'').trim();
+        if(result[role]!==undefined&&name)result[role].push(name);
+      });
+      return json({status:'ok',staff:result});
+    }catch(err){return json({status:'error',msg:err.message});}
+  }
+
+  // ③ 院區清單
+  if(p.action==='clinics'){
+    try{
+      const rows=getClinicSheet().getDataRange().getValues();
+      const clinics=rows.slice(1).map(r=>String(r[0]||'').trim()).filter(Boolean);
+      return json({status:'ok',clinics});
+    }catch(err){return json({status:'error',msg:err.message});}
+  }
+
+  // ④ 顧客查詢
+  if(p.action==='query'&&p.idHash){
+    try{
+      const sheet=getSalesSheet(),rows=sheet.getDataRange().getValues(),hdrs=rows[0];
+      const HC=hdrs.indexOf('身分證雜湊');
+      const pCols=hdrs.filter(h=>!FIXED_FRONT.includes(h)&&!FIXED_BACK.includes(h));
+      const records=rows.slice(1).filter(r=>r[HC]===p.idHash).map(r=>{
+        const o={};hdrs.forEach((h,i)=>o[h]=r[i]);
+        o.items=pCols.filter(c=>o[c]>0).map(c=>\`\${c}×\${o[c]}\`).join('、');
+        o.date=o['日期'];o.time=o['時間'];o.clinic=o['院區'];o.customer=o['顧客姓名'];
+        o.doctor=o['當班醫師'];o.staff=o['櫃檯人員'];o.total=o['結帳金額'];o.payMethod=o['付款方式'];
+        return o;
+      });
+      return json({status:'ok',records});
+    }catch(err){return json({status:'error',msg:err.message});}
+  }
+
+  return json({status:'ok',msg:'連線成功（商品主檔 + 人員名單 + 院區版）'});
+}
+function json(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}`;
+  navigator.clipboard.writeText(code).then(()=>toast('✅ 程式碼已複製'));
+}
