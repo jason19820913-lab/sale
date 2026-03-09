@@ -260,6 +260,7 @@ tbody tr:hover td{background:var(--sage-pale);}
     <div class="nav-tab"        onclick="switchPage('patient')" id="navPatient">🪪 顧客查詢</div>
     <div class="nav-tab"        onclick="switchPage('products')" id="navProducts">🛍️ 商品管理</div>
     <div class="nav-tab"        onclick="switchPage('promos')"   id="navPromos">🏷️ 促銷活動</div>
+    <div class="nav-tab"        onclick="switchPage('comm')"     id="navComm">💰 分潤設定</div>
     <div class="nav-tab"        onclick="switchPage('settings')" id="navSettings">⚙️ 系統設定</div>
   </div>
 
@@ -371,6 +372,38 @@ tbody tr:hover td{background:var(--sage-pale);}
       <div style="margin-top:12px;font-size:11px;color:#888;">
         <strong>scope 適用範圍：</strong><br>
         <code>all</code> 全部商品 ／ <code>group:protein</code> 蛋白代餐群組 ／ <code>group:mct</code> Q飽群組 ／ <code>id:p1,p2</code> 指定商品ID
+      </div>
+    </div>
+  </div>
+
+
+  <div class="page" id="pageComm">
+    <div class="page-title"><div class="page-icon">💰</div><div><div class="page-h">分潤設定</div><div class="page-sub">設定各商品對醫師、員工、護理師、藥師的分潤，儲存後自動同步 Google Sheet</div></div></div>
+
+    <div class="sc">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        <h3 style="margin:0;">💰 分潤規則</h3>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" onclick="openCommModal()">＋ 新增規則</button>
+          <button class="btn btn-outline" onclick="initDefaultComm()">載入預設規則</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:12px;">
+        💡 <strong>商品層級優先</strong>，沒設定的商品會往上找「分類預設（_cat_分類名）」或「群組預設（_group_protein）」
+      </div>
+      <div id="commList"><div style="text-align:center;padding:30px;color:#aaa;">載入中...</div></div>
+    </div>
+
+    <div class="sc" style="background:#EFF7F0;border:1px solid #C5DEC8;">
+      <h3>📖 設定說明</h3>
+      <div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><strong>productId 填法</strong><br>
+          • 商品 id（如 <code>p1</code>）→ 指定商品<br>
+          • <code>_cat_蛋白代餐</code> → 分類預設<br>
+          • <code>_group_protein</code> → 群組預設</div>
+        <div><strong>commType 填法</strong><br>
+          • <code>fixed</code> → 每賣一個固定抽 X 元<br>
+          • <code>percent</code> → 售價的 X%（如填10=10%）</div>
       </div>
     </div>
   </div>
@@ -599,6 +632,9 @@ function json(o) {
     <div class="pm-form-grid full" id="pmBadgeGroup" style="display:none;">
       <div class="fg"><label>標籤（選填，如：熱銷、推薦）</label><input type="text" id="pmBadge" placeholder="例：熱銷"></div>
     </div>
+    <div class="pm-form-grid full">
+      <div class="fg"><label>分類介紹 <span style="font-size:9px;color:#888;">（顯示於前台分類頁頂端，同分類共用同一段介紹）</span></label><textarea id="pmCatDesc" rows="2" style="width:100%;resize:vertical;padding:8px;border:1px solid #dde4de;border-radius:8px;font-size:12px;font-family:inherit;" placeholder="例：每份含20克蛋白質+10克纖維，買6送1特惠"></textarea></div>
+    </div>
     <div class="pm-modal-btns">
       <button class="btn btn-outline" onclick="closePmModal()">取消</button>
       <button class="btn btn-primary" onclick="savePmModal()">儲存</button>
@@ -608,7 +644,7 @@ function json(o) {
 
 <script>
 // ── KEYS ──
-const SALES_KEY='clinicSalesLog',GS_KEY='gsUrl',PIN_KEY='adminPin',STAFF_KEY='clinicStaff',PRODUCTS_KEY='clinicProducts',CLINIC_KEY='clinicClinics',PROMO_KEY='clinicPromos';
+const SALES_KEY='clinicSalesLog',GS_KEY='gsUrl',PIN_KEY='adminPin',STAFF_KEY='clinicStaff',PRODUCTS_KEY='clinicProducts',CLINIC_KEY='clinicClinics',PROMO_KEY='clinicPromos',COMM_KEY='clinicCommRules';
 const DEFAULT_PIN='1234';
 
 // ── DEFAULT PRODUCTS ──
@@ -654,7 +690,7 @@ function getProducts(){try{const s=localStorage.getItem(PRODUCTS_KEY);return s?J
 function saveProducts(p, silent=false){
   localStorage.setItem(PRODUCTS_KEY, JSON.stringify(p));
   if(!gasUrl()) return;
-  const PRODUCT_HDR=['id','cat','name','emoji','price','group','detail','badge','active'];
+  const PRODUCT_HDR=['id','cat','name','emoji','price','group','detail','badge','active','catDescription'];
   const rows=p.map(x=>({id:x.id||'',cat:x.cat||'',name:x.name||'',emoji:x.emoji||'',
     price:x.price||0,group:x.group||'',detail:x.detail||'',badge:x.badge||'',
     active:x.active===false?'FALSE':'TRUE'}));
@@ -693,12 +729,13 @@ function initApp(){
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 function switchPage(p){
-  ['stats','patient','products','promos','settings'].forEach(n=>{
+  ['stats','patient','products','promos','comm','settings'].forEach(n=>{
     document.getElementById('page'+cap(n)).classList.toggle('active',n===p);
     document.getElementById('nav'+cap(n)).classList.toggle('active',n===p);
   });
   if(p==='patient')connectAdminReader();
   if(p==='promos')renderPromoList();
+  if(p==='comm')renderCommPage();
 }
 
 // ── STATS ──
@@ -987,9 +1024,10 @@ function openProductModal(id=null,defaultCat=''){
     document.getElementById('pmGroup').value=p.group;
     document.getElementById('pmDetail').value=p.detail||'';
     document.getElementById('pmBadge').value=p.badge||'';
+    document.getElementById('pmCatDesc').value=p.catDescription||'';
   }else{
     document.getElementById('pmModalTitle').textContent='新增商品';
-    ['pmName','pmEmoji','pmDetail','pmBadge'].forEach(i=>document.getElementById(i).value='');
+    ['pmName','pmEmoji','pmDetail','pmBadge','pmCatDesc'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('pmPrice').value='';
     document.getElementById('pmGroup').value='other';
   }
@@ -1019,15 +1057,16 @@ function savePmModal(){
   const group=document.getElementById('pmGroup').value;
   const detail=document.getElementById('pmDetail').value.trim();
   const badge=document.getElementById('pmBadge').value.trim();
+  const catDescription=document.getElementById('pmCatDesc').value.trim();
 
   const products=getProducts();
   if(editingProductId){
     const idx=products.findIndex(p=>p.id===editingProductId);
-    if(idx>=0){products[idx]={...products[idx],cat,name,emoji,price,group,detail:detail||undefined,badge:badge||undefined};}
+    if(idx>=0){products[idx]={...products[idx],cat,name,emoji,price,group,detail:detail||undefined,badge:badge||undefined,catDescription:catDescription||undefined};}
   }else{
     const newId='custom_'+Date.now();
     const newP={cat,id:newId,emoji,name,price,group,active:true};
-    if(detail)newP.detail=detail;if(badge)newP.badge=badge;
+    if(detail)newP.detail=detail;if(badge)newP.badge=badge;if(catDescription)newP.catDescription=catDescription;
     products.push(newP);
   }
   saveProducts(products);renderProductManager();closePmModal();
@@ -1212,6 +1251,199 @@ function savePromoModal(){
 
 function closePromoModal(){document.getElementById('promoModalOverlay').classList.remove('open');}
 
+
+/* ══════════════════════════════════════════
+   分潤設定管理
+   ══════════════════════════════════════════ */
+const COMM_HEADERS=['productId','productName','doctorType','doctorValue','staffType','staffValue','nurseType','nurseValue','pharmaType','pharmaValue'];
+const COMM_ROLES=[
+  {key:'doctor',label:'👨‍⚕️ 醫師'},
+  {key:'staff', label:'💁 員工'},
+  {key:'nurse', label:'👩‍⚕️ 護理'},
+  {key:'pharma',label:'💊 藥師'},
+];
+
+let editCommRules=[];
+
+function loadCommData(){
+  try{const s=localStorage.getItem(COMM_KEY);editCommRules=s?JSON.parse(s):[];}catch(e){editCommRules=[];}
+}
+
+function initDefaultComm(){
+  if(!confirm('載入預設分潤規則？現有設定將被覆蓋。'))return;
+  editCommRules=[
+    {productId:'_cat_蛋白代餐',productName:'蛋白代餐（分類預設）',doctorType:'fixed',doctorValue:100,staffType:'fixed',staffValue:10,nurseType:'fixed',nurseValue:0,pharmaType:'fixed',pharmaValue:0},
+    {productId:'_cat_Q飽纖燃飲',productName:'Q飽纖燃飲（分類預設）',doctorType:'fixed',doctorValue:100,staffType:'fixed',staffValue:10,nurseType:'fixed',nurseValue:0,pharmaType:'fixed',pharmaValue:0},
+    {productId:'_cat_看診套組',productName:'看診套組（分類預設）',doctorType:'fixed',doctorValue:100,staffType:'fixed',staffValue:10,nurseType:'fixed',nurseValue:0,pharmaType:'fixed',pharmaValue:0},
+    {productId:'_cat_盒裝膠囊',productName:'盒裝膠囊（分類預設）',doctorType:'fixed',doctorValue:0,staffType:'fixed',staffValue:0,nurseType:'fixed',nurseValue:0,pharmaType:'percent',pharmaValue:10},
+    {productId:'_cat_其他營養',productName:'其他營養（分類預設）',doctorType:'fixed',doctorValue:50,staffType:'fixed',staffValue:10,nurseType:'fixed',nurseValue:0,pharmaType:'fixed',pharmaValue:0},
+  ];
+  saveCommRules();renderCommPage();toast('✅ 預設分潤規則已載入');
+}
+
+function renderCommPage(){
+  loadCommData();
+  const el=document.getElementById('commList');
+  if(!el)return;
+  if(!editCommRules.length){
+    el.innerHTML=`<div style="text-align:center;padding:30px;color:#aaa;"><div style="font-size:32px;margin-bottom:8px;">💰</div><p>尚無分潤規則</p><button class="btn btn-outline" style="margin-top:10px;" onclick="initDefaultComm()">載入預設規則</button></div>`;
+    return;
+  }
+  el.innerHTML=`
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:#2C3E35;color:#fff;">
+          <th style="padding:8px 10px;text-align:left;white-space:nowrap;">商品/分類</th>
+          <th style="padding:8px 10px;text-align:center;">👨‍⚕️ 醫師</th>
+          <th style="padding:8px 10px;text-align:center;">💁 員工</th>
+          <th style="padding:8px 10px;text-align:center;">👩‍⚕️ 護理</th>
+          <th style="padding:8px 10px;text-align:center;">💊 藥師</th>
+          <th style="padding:8px 10px;text-align:center;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${editCommRules.map((r,i)=>`
+          <tr style="border-bottom:1px solid #eee;background:${i%2===0?'#fff':'#fafafa'}">
+            <td style="padding:8px 10px;">
+              <div style="font-weight:600;">${r.productName||r.productId||'-'}</div>
+              <div style="font-size:10px;color:#888;">${r.productId||''}</div>
+            </td>
+            ${['doctor','staff','nurse','pharma'].map(role=>`
+              <td style="padding:8px 10px;text-align:center;white-space:nowrap;">
+                ${r[role+'Type']==='percent'
+                  ? `<span style="color:#2E7D32;font-weight:600;">${r[role+'Value']}%</span>`
+                  : `<span style="font-weight:600;">NT$${r[role+'Value']||0}</span>`}
+                <div style="font-size:9px;color:#aaa;">${r[role+'Type']==='percent'?'百分比':'固定'}</div>
+              </td>`).join('')}
+            <td style="padding:8px 10px;text-align:center;">
+              <div style="display:flex;gap:4px;justify-content:center;">
+                <button class="btn btn-outline" style="padding:3px 8px;font-size:10px;" onclick="openCommModal(${i})">編輯</button>
+                <button class="btn" style="padding:3px 8px;font-size:10px;background:#fce4ec;color:#c62828;border:none;" onclick="deleteCommRule(${i})">刪除</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+function deleteCommRule(i){
+  if(!confirm('確定刪除此分潤規則？'))return;
+  editCommRules.splice(i,1);saveCommRules();renderCommPage();
+}
+
+function saveCommRules(){
+  localStorage.setItem(COMM_KEY,JSON.stringify(editCommRules));
+  if(!gasUrl())return;
+  const rows=editCommRules.map(r=>({
+    productId:r.productId||'',productName:r.productName||'',
+    doctorType:r.doctorType||'fixed',doctorValue:r.doctorValue||0,
+    staffType:r.staffType||'fixed',staffValue:r.staffValue||0,
+    nurseType:r.nurseType||'fixed',nurseValue:r.nurseValue||0,
+    pharmaType:r.pharmaType||'fixed',pharmaValue:r.pharmaValue||0,
+  }));
+  gasWrite('分潤規則',COMM_HEADERS,rows)
+    .then(d=>d.status==='ok'?toast('☁️ 分潤規則已同步至 Google Sheet'):toast('⚠️ 同步失敗：'+d.msg))
+    .catch(()=>toast('⚠️ Sheet 同步網路錯誤'));
+}
+
+// ── Comm Modal ──
+let editingCommIdx=-1;
+function openCommModal(idx){
+  editingCommIdx=idx===undefined?-1:idx;
+  const r=editingCommIdx>=0?editCommRules[editingCommIdx]:{};
+  const products=getProducts();
+
+  // Build product id options
+  const cats=[...new Set(products.map(p=>p.cat))];
+  const groups=[...new Set(products.map(p=>p.group))];
+  const productOpts=`
+    <option value="">── 指定商品 ──</option>
+    ${products.map(p=>`<option value="${p.id}"${r.productId===p.id?' selected':''}>${p.name}（${p.cat}）</option>`).join('')}
+    <option value="">── 分類預設 ──</option>
+    ${cats.map(cat=>`<option value="_cat_${cat}"${r.productId==='_cat_'+cat?' selected':''}>_cat_${cat}</option>`).join('')}
+    <option value="">── 群組預設 ──</option>
+    ${groups.map(g=>`<option value="_group_${g}"${r.productId==='_group_'+g?' selected':''}>_group_${g}</option>`).join('')}
+    <option value="_custom_">自訂輸入</option>`;
+
+  document.getElementById('commModalOverlay').classList.add('open');
+  document.getElementById('commModalBody').innerHTML=`
+    <h3 style="margin:0 0 16px;">${editingCommIdx>=0?'編輯':'新增'}分潤規則</h3>
+    <div style="display:grid;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label style="font-size:11px;font-weight:700;">套用對象</label>
+          <select class="fg-input" id="cm_pid" onchange="commPidChanged()">
+            ${productOpts}
+          </select>
+        </div>
+        <div class="form-group" id="cm_pid_custom_group" style="display:${r.productId&&!products.find(p=>p.id===r.productId)&&!r.productId.startsWith('_cat_')&&!r.productId.startsWith('_group_')?'block':'none'}">
+          <label style="font-size:11px;font-weight:700;">自訂 productId</label>
+          <input class="fg-input" id="cm_pid_custom" value="${r.productId||''}" placeholder="如：_cat_蛋白代餐">
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="font-size:11px;font-weight:700;">顯示名稱</label>
+        <input class="fg-input" id="cm_name" value="${r.productName||''}" placeholder="例：蛋白代餐（分類預設）">
+      </div>
+      <div style="border:1px solid #eee;border-radius:10px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;margin-bottom:10px;color:#555;">各角色分潤設定</div>
+        <div style="display:grid;gap:8px;">
+          ${COMM_ROLES.map(role=>`
+            <div style="display:grid;grid-template-columns:80px 1fr 1fr;align-items:center;gap:8px;">
+              <div style="font-size:12px;font-weight:600;">${role.label}</div>
+              <select class="fg-input" id="cm_${role.key}_type" style="height:32px;font-size:12px;">
+                <option value="fixed"${(r[role.key+'Type']||'fixed')==='fixed'?' selected':''}>固定金額 NT$</option>
+                <option value="percent"${r[role.key+'Type']==='percent'?' selected':''}>百分比 %</option>
+              </select>
+              <input class="fg-input" type="number" id="cm_${role.key}_val" value="${r[role.key+'Value']||0}" min="0" style="height:32px;font-size:12px;" placeholder="0">
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="closeCommModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCommModal()">儲存</button>
+    </div>`;
+}
+
+function commPidChanged(){
+  const val=document.getElementById('cm_pid').value;
+  const cg=document.getElementById('cm_pid_custom_group');
+  if(cg)cg.style.display=val==='_custom_'?'block':'none';
+  // auto-fill name
+  const nameEl=document.getElementById('cm_name');
+  if(!nameEl)return;
+  if(val&&val!=='_custom_'){
+    const products=getProducts();
+    const p=products.find(x=>x.id===val);
+    if(p&&!nameEl.value) nameEl.value=p.name;
+    else if(val.startsWith('_cat_')&&!nameEl.value) nameEl.value=val.replace('_cat_','')+'（分類預設）';
+    else if(val.startsWith('_group_')&&!nameEl.value) nameEl.value=val.replace('_group_','')+'（群組預設）';
+  }
+}
+
+function saveCommModal(){
+  let pid=document.getElementById('cm_pid').value;
+  if(pid==='_custom_') pid=document.getElementById('cm_pid_custom')?.value.trim()||'';
+  if(!pid){toast('⚠️ 請選擇套用對象');return;}
+  const rule={
+    productId:pid,
+    productName:document.getElementById('cm_name').value.trim()||pid,
+  };
+  COMM_ROLES.forEach(role=>{
+    rule[role.key+'Type']=document.getElementById('cm_'+role.key+'_type').value;
+    rule[role.key+'Value']=Number(document.getElementById('cm_'+role.key+'_val').value)||0;
+  });
+  if(editingCommIdx>=0) editCommRules[editingCommIdx]=rule;
+  else editCommRules.push(rule);
+  saveCommRules();renderCommPage();closeCommModal();
+  toast('✅ 分潤規則已儲存');
+}
+
+function closeCommModal(){document.getElementById('commModalOverlay').classList.remove('open');}
+
 const DEFAULT_CLINICS=['鶯歌院區','三樹院區','樹林院區','桃園院區','土城院區','八德院區','龍潭院區','大溪院區','大竹院區','大浦院區','平鎮院區','埔心院區'];
 let editClinics=[];
 function loadClinicData(){
@@ -1252,7 +1484,7 @@ async function loadStaffData(){
   // 背景同步 GAS 最新資料
   if(gasUrl()){
     try{
-      const [sd,cd,pmd]=await Promise.all([gasRead('人員名單'),gasRead('院區清單'),gasRead('促銷活動')]);
+      const [sd,cd,pmd,commD]=await Promise.all([gasRead('人員名單'),gasRead('院區清單'),gasRead('促銷活動'),gasRead('分潤規則')]);
       if(sd.status==='ok'&&sd.rows){
         const staff={doctors:[],staff:[],nurses:[],pharmas:[]};
         sd.rows.forEach(r=>{const role=r['角色'],name=String(r['姓名']||'').trim();if(staff[role]!==undefined&&name)staff[role].push(name);});
@@ -1267,7 +1499,13 @@ async function loadStaffData(){
         localStorage.setItem(PROMO_KEY,JSON.stringify(promos));
         editPromos=promos;
       }
-    }catch(e){console.warn('[staff/clinics/promos] GAS 同步失敗，使用本機快取');}
+      if(commD.status==='ok'&&commD.rows&&commD.rows.length){
+        editCommRules=commD.rows.map(r=>({...r,
+          doctorValue:Number(r.doctorValue)||0,staffValue:Number(r.staffValue)||0,
+          nurseValue:Number(r.nurseValue)||0,pharmaValue:Number(r.pharmaValue)||0}));
+        localStorage.setItem(COMM_KEY,JSON.stringify(editCommRules));
+      }
+    }catch(e){console.warn('[staff/clinics/promos/comm] GAS 同步失敗，使用本機快取');}
   }
 }
 function renderStaffLists(){
@@ -1425,171 +1663,10 @@ setInterval(()=>{if(document.getElementById('appShell').classList.contains('visi
   <div id="promoModalOverlay" class="pm-overlay" onclick="if(event.target===this)closePromoModal()">
     <div class="pm-modal" id="promoModalBody" style="max-width:560px;"></div>
   </div>
+
+  <!-- Comm Modal -->
+  <div id="commModalOverlay" class="pm-overlay" onclick="if(event.target===this)closeCommModal()">
+    <div class="pm-modal" id="commModalBody" style="max-width:560px;"></div>
+  </div>
 </body>
 </html>
-function copyScript(){
-  const code=`// 擇木良食 × 金鶯診所｜GAS（商品主檔 + 人員名單 + 院區 + 銷售記錄）
-// 同一 Google Sheet，四個工作頁：銷售紀錄 / 商品主檔 / 人員名單 / 院區清單
-const SALES_SHEET   = '銷售紀錄';
-const PRODUCT_SHEET = '商品主檔';
-const STAFF_SHEET   = '人員名單';
-const CLINIC_SHEET  = '院區清單';
-const FIXED_FRONT = ['日期','時間','院區','顧客姓名','身分證遮罩','病歷號','當班醫師','櫃檯人員'];
-const FIXED_BACK  = ['結帳金額','付款方式','醫師抽成','員工抽成','藥師抽成','身分證雜湊'];
-const PRODUCT_HDR = ['id','cat','name','emoji','price','group','detail','badge','active'];
-const STAFF_ROLES = ['doctors','staff','nurses','pharmas'];
-
-function styleHdr(s){s.getRange('1:1').setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');}
-function getSalesSheet(){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
-  let s=ss.getSheetByName(SALES_SHEET);
-  if(!s){s=ss.insertSheet(SALES_SHEET);s.appendRow([...FIXED_FRONT,...FIXED_BACK]);styleHdr(s);s.setFrozenRows(1);}
-  return s;
-}
-function getProductSheet(){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
-  let s=ss.getSheetByName(PRODUCT_SHEET);
-  if(!s){s=ss.insertSheet(PRODUCT_SHEET);s.appendRow(PRODUCT_HDR);styleHdr(s);s.setFrozenRows(1);}
-  return s;
-}
-function getStaffSheet(){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
-  let s=ss.getSheetByName(STAFF_SHEET);
-  if(!s){
-    s=ss.insertSheet(STAFF_SHEET);
-    s.appendRow(['角色','姓名']);
-    styleHdr(s);s.setFrozenRows(1);
-    // 角色欄填入：doctors / staff / nurses / pharmas
-  }
-  return s;
-}
-function getClinicSheet(){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
-  let s=ss.getSheetByName(CLINIC_SHEET);
-  if(!s){
-    s=ss.insertSheet(CLINIC_SHEET);
-    s.appendRow(['院區名稱']);
-    styleHdr(s);s.setFrozenRows(1);
-    // 每列填一個院區名稱，例：鶯歌院區
-  }
-  return s;
-}
-function ensureCol(sheet,col){
-  const h=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
-  if(h.includes(col))return;
-  const pos=h.indexOf(FIXED_BACK[0]);
-  const c=(pos>=0?pos:h.length)+1;
-  sheet.insertColumnBefore(c);
-  sheet.getRange(1,c).setValue(col).setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
-}
-
-function doPost(e) {
-  try {
-    const d=JSON.parse(e.postData.contents);
-
-    // ① 商品主檔
-    if(d.action==='saveProducts'){
-      const s=getProductSheet();
-      s.clearContents();s.appendRow(PRODUCT_HDR);styleHdr(s);
-      d.products.forEach(p=>s.appendRow([
-        p.id||'',p.cat||'',p.name||'',p.emoji||'',p.price||0,
-        p.group||'',p.detail||'',p.badge||'',p.active===false?'FALSE':'TRUE'
-      ]));
-      return json({status:'ok',count:d.products.length});
-    }
-
-    // ② 人員名單
-    if(d.action==='saveStaff'){
-      const s=getStaffSheet();
-      s.clearContents();s.appendRow(['角色','姓名']);styleHdr(s);
-      STAFF_ROLES.forEach(role=>(d.staff[role]||[]).forEach(name=>s.appendRow([role,name])));
-      return json({status:'ok'});
-    }
-
-    // ③ 院區清單
-    if(d.action==='saveClinics'){
-      const s=getClinicSheet();
-      s.clearContents();s.appendRow(['院區名稱']);styleHdr(s);
-      (d.clinics||[]).forEach(c=>s.appendRow([c]));
-      return json({status:'ok',count:(d.clinics||[]).length});
-    }
-
-    // ④ 銷售記錄
-    const qty=d.itemQty||{},sheet=getSalesSheet();
-    Object.keys(qty).forEach(c=>ensureCol(sheet,c));
-    const hdrs=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
-    const fd={
-      '日期':d.date,'時間':d.time,'院區':d.clinic||'','顧客姓名':d.customer,
-      '身分證遮罩':d.idMask||'','病歷號':d.phone||'','當班醫師':d.doctor,'櫃檯人員':d.staff||'',
-      '結帳金額':d.total,'付款方式':d.payMethod,
-      '醫師抽成':d.doctorComm||0,'員工抽成':d.staffComm||0,'藥師抽成':d.pharmaComm||0,'身分證雜湊':d.idHash||''
-    };
-    sheet.appendRow(hdrs.map(h=>qty[h]!==undefined?qty[h]:(fd[h]!==undefined?fd[h]:'')));
-    return json({status:'ok'});
-  } catch(err){return json({status:'error',msg:err.message});}
-}
-
-function doGet(e) {
-  const p=(e||{}).parameter||{};
-
-  // ① 商品主檔
-  if(p.action==='products'){
-    try{
-      const s=getProductSheet(),rows=s.getDataRange().getValues();
-      if(rows.length<=1)return json({status:'ok',products:[]});
-      const h=rows[0];
-      const products=rows.slice(1).map(r=>{
-        const o={};h.forEach((k,i)=>o[k]=r[i]);
-        o.price=Number(o.price)||0;
-        o.active=String(o.active).toUpperCase()!=='FALSE';
-        if(!o.detail)delete o.detail;if(!o.badge)delete o.badge;
-        return o;
-      });
-      return json({status:'ok',products});
-    }catch(err){return json({status:'error',msg:err.message});}
-  }
-
-  // ② 人員名單
-  if(p.action==='staff'){
-    try{
-      const rows=getStaffSheet().getDataRange().getValues();
-      const result={doctors:[],staff:[],nurses:[],pharmas:[]};
-      rows.slice(1).forEach(r=>{
-        const role=r[0],name=String(r[1]||'').trim();
-        if(result[role]!==undefined&&name)result[role].push(name);
-      });
-      return json({status:'ok',staff:result});
-    }catch(err){return json({status:'error',msg:err.message});}
-  }
-
-  // ③ 院區清單
-  if(p.action==='clinics'){
-    try{
-      const rows=getClinicSheet().getDataRange().getValues();
-      const clinics=rows.slice(1).map(r=>String(r[0]||'').trim()).filter(Boolean);
-      return json({status:'ok',clinics});
-    }catch(err){return json({status:'error',msg:err.message});}
-  }
-
-  // ④ 顧客查詢
-  if(p.action==='query'&&p.idHash){
-    try{
-      const sheet=getSalesSheet(),rows=sheet.getDataRange().getValues(),hdrs=rows[0];
-      const HC=hdrs.indexOf('身分證雜湊');
-      const pCols=hdrs.filter(h=>!FIXED_FRONT.includes(h)&&!FIXED_BACK.includes(h));
-      const records=rows.slice(1).filter(r=>r[HC]===p.idHash).map(r=>{
-        const o={};hdrs.forEach((h,i)=>o[h]=r[i]);
-        o.items=pCols.filter(c=>o[c]>0).map(c=>\`\${c}×\${o[c]}\`).join('、');
-        o.date=o['日期'];o.time=o['時間'];o.clinic=o['院區'];o.customer=o['顧客姓名'];
-        o.doctor=o['當班醫師'];o.staff=o['櫃檯人員'];o.total=o['結帳金額'];o.payMethod=o['付款方式'];
-        return o;
-      });
-      return json({status:'ok',records});
-    }catch(err){return json({status:'error',msg:err.message});}
-  }
-
-  return json({status:'ok',msg:'連線成功（商品主檔 + 人員名單 + 院區版）'});
-}
-function json(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}`;
-  navigator.clipboard.writeText(code).then(()=>toast('✅ 程式碼已複製'));
-}
