@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>擇木良食 × 金鶯診所｜後台管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sage:#6B8F71;--sage-light:#A8C5AD;--sage-pale:#E8F2EA;
+  --cream:#F9F5EE;--warm:#FEFCF8;--charcoal:#2C3E35;
+  --brown:#8B7355;--gold:#C9A84C;--red:#D4756A;--purple:#7B5EA7;
+  --sh-sm:0 2px 8px rgba(44,62,53,.08);--sh-md:0 4px 20px rgba(44,62,53,.12);
+  --r:14px;--r-sm:10px;
+  --hh:60px;--nh:44px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow-x:hidden;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--cream);color:var(--charcoal);}
+
+/* ── LOGIN ── */
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,var(--charcoal),#1A2A22);display:flex;align-items:center;justify-content:center;z-index:500;transition:opacity .4s;}
+.login-screen.hidden{opacity:0;pointer-events:none;}
+.login-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:38px 36px 30px;width:min(340px,90vw);text-align:center;backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.login-logo{font-size:38px;margin-bottom:14px;}
+.login-title{color:#fff;font-size:17px;font-weight:700;margin-bottom:3px;letter-spacing:1px;}
+.login-sub{color:var(--sage-light);font-size:11px;margin-bottom:24px;}
+.pin-display{display:flex;justify-content:center;gap:10px;margin-bottom:20px;}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:transparent;transition:all .2s;}
+.pin-dot.filled{background:var(--sage-light);border-color:var(--sage-light);}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.pin-btn{height:52px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#fff;font-family:inherit;font-size:19px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.pin-btn:hover{background:rgba(255,255,255,.15);}
+.pin-btn:active{transform:scale(.93);}
+.pin-btn.del{font-size:17px;color:var(--sage-light);}
+.pin-error{color:#FF8A80;font-size:11px;height:14px;margin-top:4px;}
+.pin-hint{color:rgba(255,255,255,.3);font-size:10px;margin-top:12px;}
+
+/* ── APP SHELL ── */
+.app-shell{display:none;}
+.app-shell.visible{display:block;}
+
+/* ── HEADER ── */
+header{background:var(--charcoal);height:var(--hh);padding:0 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.brand{display:flex;align-items:center;gap:9px;}
+.brand-icon{width:30px;height:30px;background:var(--sage);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.brand h1{color:#fff;font-size:13px;font-weight:700;letter-spacing:1px;line-height:1.2;}
+.brand p{color:var(--sage-light);font-size:10px;}
+.hdr-right{display:flex;align-items:center;gap:8px;}
+.admin-badge{background:rgba(201,168,76,.2);color:var(--gold);border:1px solid rgba(201,168,76,.3);padding:3px 10px;border-radius:14px;font-size:10px;font-weight:700;letter-spacing:.8px;}
+.gs-badge{display:none;align-items:center;gap:5px;background:#E8F5E9;color:#2E7D32;padding:3px 10px;border-radius:14px;font-size:10px;font-weight:700;}
+.gs-badge.show{display:inline-flex;}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);padding:4px 12px;border-radius:14px;font-family:inherit;font-size:10px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.logout-btn:hover{border-color:rgba(255,255,255,.5);color:#fff;}
+
+/* ── NAV ── */
+.nav-bar{background:#1E2E26;display:flex;overflow-x:auto;scrollbar-width:none;padding:0 12px;}
+.nav-bar::-webkit-scrollbar{display:none;}
+.nav-tab{padding:0 14px;height:var(--nh);display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:rgba(255,255,255,.5);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0;}
+.nav-tab:hover{color:rgba(255,255,255,.8);}
+.nav-tab.active{color:#fff;border-bottom-color:var(--sage-light);}
+
+/* ── PAGE ── */
+.page{display:none;padding:18px 14px;}
+.page.active{display:block;}
+@media(min-width:768px){.page{padding:22px 26px;}}
+.page-title{font-size:16px;font-weight:700;margin-bottom:3px;}
+.page-sub{font-size:11px;color:#888;margin-bottom:18px;}
+
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+@media(min-width:600px){.stat-grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:900px){.stat-grid{grid-template-columns:repeat(5,1fr);}}
+.stat-card{background:#fff;border-radius:var(--r);padding:14px 16px;border:1px solid #E8EEE9;box-shadow:var(--sh-sm);}
+.stat-icon{font-size:22px;margin-bottom:7px;}
+.stat-num{font-size:20px;font-weight:900;color:var(--sage);}
+.stat-label{font-size:10px;color:#888;margin-top:2px;}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r);box-shadow:var(--sh-sm);}
+table{width:100%;border-collapse:collapse;background:#fff;}
+thead th{background:var(--sage-pale);padding:9px 12px;font-size:11px;font-weight:700;color:var(--charcoal);text-align:left;letter-spacing:.3px;white-space:nowrap;}
+tbody td{padding:9px 12px;font-size:11px;border-bottom:1px solid #F0F4F1;color:var(--charcoal);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--sage-pale);}
+.tag{display:inline-block;padding:2px 8px;border-radius:9px;font-size:9px;font-weight:700;}
+.tag-cash{background:#E8F5E9;color:#2E7D32;}
+.tag-transfer{background:#E3F2FD;color:#1565C0;}
+.empty-row td{text-align:center;color:#aaa;padding:24px!important;font-size:12px;}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
+/* ── BUTTONS ── */
+.btn{height:36px;padding:0 16px;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-primary{background:var(--sage);color:#fff;}
+.btn-primary:hover{background:#5A7B60;}
+.btn-outline{background:#fff;color:var(--sage);border:2px solid var(--sage);}
+.btn-outline:hover{background:var(--sage-pale);}
+.btn-red{background:#fff;color:var(--red);border:1.5px solid #E8EEE9;}
+.btn-red:hover{border-color:var(--red);}
+.btn-sm{height:30px;padding:0 12px;border-radius:8px;border:1.5px solid #D0DEAD;background:#fff;font-family:inherit;font-size:11px;cursor:pointer;color:#888;transition:all .2s;}
+.btn-sm:hover{border-color:var(--red);color:var(--red);}
+.btn-sm.primary{background:var(--sage);border-color:var(--sage);color:#fff;}
+.btn-sm.primary:hover{background:#5A7B60;}
+
+/* ── CLINIC FILTER ── */
+.clinic-filter-btn{padding:4px 11px;border-radius:14px;border:1.5px solid #D0DEAD;background:#fff;font-family:inherit;font-size:11px;font-weight:500;color:var(--brown);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.clinic-filter-btn:hover{border-color:var(--sage);color:var(--sage);}
+.clinic-filter-btn.active{background:var(--sage);border-color:var(--sage);color:#fff;}
+
+/* ── SETTINGS CARD ── */
+.sc{background:#fff;border-radius:var(--r);border:1px solid #E8EEE9;box-shadow:var(--sh-sm);padding:20px;margin-bottom:16px;}
+.sc h3{font-size:13px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:7px;}
+.sc p{font-size:11px;color:#888;line-height:1.7;margin-bottom:14px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:10px;font-weight:700;color:var(--brown);letter-spacing:.5px;}
+.fg input,.fg select{height:36px;width:100%;border:1.5px solid #D8E8DA;border-radius:var(--r-sm);padding:0 10px;font-family:inherit;font-size:12px;outline:none;background:var(--cream);transition:border-color .2s;}
+.fg input:focus,.fg select:focus{border-color:var(--sage);background:#fff;}
+.input-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
+.input-row .fg{flex:1;min-width:180px;}
+.status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:16px;font-size:11px;font-weight:600;margin-top:8px;}
+.pill-ok{background:#E8F5E9;color:#2E7D32;}
+.pill-err{background:#FDECEA;color:#C62828;}
+.pill-pending{background:#FFF8E1;color:#F57F17;}
+
+/* GUIDE */
+.guide-step{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;}
+.gnum{width:22px;height:22px;border-radius:50%;background:var(--sage);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.gtext{font-size:11px;color:#444;line-height:1.6;}
+
+/* CODE BLOCK */
+.code-block{background:#1E1E2E;color:#CDD6F4;border-radius:var(--r-sm);padding:14px;font-family:'Courier New',monospace;font-size:10px;line-height:1.7;overflow-x:auto;margin:10px 0;position:relative;}
+.kw{color:#CBA6F7}.str{color:#A6E3A1}.fn{color:#89B4FA}.cm{color:#6C7086}
+.copy-btn{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.1);color:#CDD6F4;border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:2px 8px;font-size:9px;cursor:pointer;font-family:inherit;}
+.copy-btn:hover{background:rgba(255,255,255,.2);}
+
+/* STAFF CHIPS */
+.staff-add-row{display:flex;gap:7px;margin-bottom:8px;}
+.staff-add-row input{flex:1;height:34px;border:1.5px solid #D8E8DA;border-radius:var(--r-sm);padding:0 10px;font-family:inherit;font-size:12px;outline:none;background:var(--cream);}
+.staff-add-row input:focus{border-color:var(--sage);background:#fff;}
+.chip-list{display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;padding:2px;}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--sage-pale);color:var(--charcoal);border:1px solid #C5DEC8;padding:4px 10px;border-radius:16px;font-size:11px;font-weight:500;}
+.chip-del{background:none;border:none;color:#aaa;cursor:pointer;font-size:13px;line-height:1;padding:0;transition:color .15s;}
+.chip-del:hover{color:var(--red);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:520px){.two-col{grid-template-columns:1fr;}}
+
+/* READER */
+.reader-bar{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E8EEE9;border-radius:var(--r);padding:14px 16px;margin-bottom:14px;box-shadow:var(--sh-sm);flex-wrap:wrap;}
+.reader-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:18px;font-size:11px;font-weight:600;transition:all .3s;flex-shrink:0;}
+.reader-pill.off{background:#F0F0F0;color:#aaa;}
+.reader-pill.connecting{background:#FFF8E1;color:#F9A825;}
+.reader-pill.ready{background:#E8F5E9;color:#2E7D32;}
+.reader-pill.reading{background:#E3F2FD;color:#1565C0;animation:rp 1s infinite;}
+.reader-pill.error{background:#FFEBEE;color:#C62828;}
+@keyframes rp{0%,100%{opacity:1}50%{opacity:.5}}
+.reader-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.read-card-btn{height:36px;padding:0 14px;background:linear-gradient(135deg,#4A9B8E,var(--sage));color:#fff;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;box-shadow:0 2px 8px rgba(74,155,142,.3);white-space:nowrap;}
+.read-card-btn:hover:not(:disabled){transform:translateY(-1px);}
+.read-card-btn:disabled{opacity:.4;cursor:not-allowed;}
+.id-manual-wrap{display:flex;gap:7px;align-items:center;flex:1;min-width:200px;}
+.id-manual-wrap input{flex:1;height:36px;border:1.5px solid #D8E8DA;border-radius:var(--r-sm);padding:0 12px;font-family:inherit;font-size:13px;font-weight:600;letter-spacing:2px;background:var(--cream);outline:none;text-transform:uppercase;}
+.id-manual-wrap input:focus{border-color:var(--sage);background:#fff;}
+
+/* ── PRODUCT MANAGEMENT ── */
+.pm-grid{display:grid;grid-template-columns:1fr;gap:0;border-radius:var(--r);overflow:hidden;border:1px solid #E8EEE9;box-shadow:var(--sh-sm);}
+.pm-cat-header{background:var(--sage-pale);padding:10px 14px;font-size:12px;font-weight:700;border-bottom:1px solid #D8EAD9;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.pm-cat-body{background:#fff;}
+.pm-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #F0F4F1;transition:background .15s;}
+.pm-item:last-child{border-bottom:none;}
+.pm-item:hover{background:var(--sage-pale);}
+.pm-item.inactive{opacity:.5;}
+.pm-item[draggable="true"]{user-select:none;}
+.pm-item.drag-over{border-top:2px solid var(--sage);background:var(--sage-pale);}
+.pm-cat-body.drag-over-body{background:var(--sage-pale);outline:2px dashed var(--sage-light);}
+.pm-drag{cursor:grab;color:#ccc;font-size:16px;flex-shrink:0;}
+.pm-drag:active{cursor:grabbing;}
+.pm-emoji{font-size:20px;width:28px;text-align:center;flex-shrink:0;}
+.pm-info{flex:1;min-width:0;}
+.pm-name{font-size:12px;font-weight:600;}
+.pm-cat-tag{font-size:10px;color:var(--sage);background:var(--sage-pale);padding:1px 7px;border-radius:8px;margin-left:5px;}
+.pm-price{font-size:12px;font-weight:700;color:var(--sage);white-space:nowrap;flex-shrink:0;}
+.pm-toggle{width:38px;height:20px;border-radius:10px;background:#ccc;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.pm-toggle.on{background:var(--sage);}
+.pm-toggle::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.pm-toggle.on::after{transform:translateX(18px);}
+.pm-edit-btn{background:none;border:1.5px solid #E8EEE9;color:var(--brown);font-size:10px;border-radius:7px;padding:3px 9px;cursor:pointer;white-space:nowrap;transition:all .2s;font-family:inherit;}
+.pm-edit-btn:hover{border-color:var(--sage);color:var(--sage);}
+.pm-del-btn{background:none;border:none;color:#ddd;font-size:16px;cursor:pointer;flex-shrink:0;transition:color .2s;line-height:1;padding:0 2px;}
+.pm-del-btn:hover{color:var(--red);}
+.pm-add-row{padding:10px 14px;background:var(--warm);border-top:2px dashed #D8E8DA;}
+
+/* Product modal */
+.pm-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:14px;}
+.pm-modal-overlay.open{display:flex;}
+.pm-modal{background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:mIn .3s ease;}
+@keyframes mIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.pm-modal h3{font-size:15px;font-weight:700;margin-bottom:16px;}
+.pm-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.pm-form-grid.full{grid-template-columns:1fr;}
+.pm-modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* TOAST */
+.toast-wrap{position:fixed;top:68px;right:12px;z-index:600;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
+.toast{background:var(--charcoal);color:#fff;padding:8px 13px;border-radius:var(--r-sm);font-size:11px;font-weight:500;box-shadow:var(--sh-md);animation:tIn .3s ease,tOut .3s ease 2.5s forwards;pointer-events:all;}
+@keyframes tIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tOut{from{opacity:1}to{opacity:0}}
+</style>
+</head>
+<body>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🔐</div>
+    <div class="login-title">工作人員後台</div>
+    <div class="login-sub">請輸入 PIN 碼進入管理系統</div>
+    <div class="pin-display">
+      <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinInput('1')">1</button>
+      <button class="pin-btn" onclick="pinInput('2')">2</button>
+      <button class="pin-btn" onclick="pinInput('3')">3</button>
+      <button class="pin-btn" onclick="pinInput('4')">4</button>
+      <button class="pin-btn" onclick="pinInput('5')">5</button>
+      <button class="pin-btn" onclick="pinInput('6')">6</button>
+      <button class="pin-btn" onclick="pinInput('7')">7</button>
+      <button class="pin-btn" onclick="pinInput('8')">8</button>
+      <button class="pin-btn" onclick="pinInput('9')">9</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+      <button class="pin-btn" onclick="pinInput('0')">0</button>
+      <button class="pin-btn del" onclick="pinClear()">✕</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-hint">預設 PIN：1234（可在後台設定中修改）</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app-shell" id="appShell">
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🌿</div>
+      <div><h1>擇木良食 × 金鶯診所</h1><p>後台管理系統</p></div>
+    </div>
+    <div class="hdr-right">
+      <span class="admin-badge">👔 ADMIN</span>
+      <span class="gs-badge" id="gsBadge">🟢 Sheets</span>
+      <button class="logout-btn" onclick="logout()">登出</button>
+    </div>
+  </header>
+
+  <div class="nav-bar">
+    <div class="nav-tab active" onclick="switchPage('stats')"  id="navStats">📊 銷售統計</div>
+    <div class="nav-tab"        onclick="switchPage('patient')" id="navPatient">🪪 顧客查詢</div>
+    <div class="nav-tab"        onclick="switchPage('products')" id="navProducts">🛍️ 商品管理</div>
+    <div class="nav-tab"        onclick="switchPage('settings')" id="navSettings">⚙️ 系統設定</div>
+  </div>
+
+  <!-- ── STATS PAGE ── -->
+  <div class="page active" id="pageStats">
+    <div class="page-title">銷售統計</div>
+    <div class="page-sub" id="statsDateLabel">今日銷售概覽</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;color:var(--brown);">篩選：</span>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;" id="clinicFilterBtns">
+        <button class="clinic-filter-btn active" onclick="filterClinic('',this)">全部</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('鶯歌院區',this)">鶯歌</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('三樹院區',this)">三樹</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('樹林院區',this)">樹林</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('桃園院區',this)">桃園</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('土城院區',this)">土城</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('八德院區',this)">八德</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('龍潭院區',this)">龍潭</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('大溪院區',this)">大溪</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('大竹院區',this)">大竹</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('大浦院區',this)">大浦</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('平鎮院區',this)">平鎮</button>
+        <button class="clinic-filter-btn" onclick="filterClinic('埔心院區',this)">埔心</button>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-num" id="statRev">NT$ 0</div><div class="stat-label">今日總營收</div></div>
+      <div class="stat-card"><div class="stat-icon">🧾</div><div class="stat-num" id="statOrders">0</div><div class="stat-label">今日訂單數</div></div>
+      <div class="stat-card"><div class="stat-icon">👨‍⚕️</div><div class="stat-num" id="statDr">NT$ 0</div><div class="stat-label">醫師抽成</div></div>
+      <div class="stat-card"><div class="stat-icon">💁</div><div class="stat-num" id="statSt">NT$ 0</div><div class="stat-label">員工抽成</div></div>
+      <div class="stat-card"><div class="stat-icon">💊</div><div class="stat-num" id="statPh">NT$ 0</div><div class="stat-label">藥師抽成</div></div>
+    </div>
+    <div class="section-title">
+      <span>訂單明細</span>
+      <button class="btn-sm" onclick="clearLog()">🗑️ 清除紀錄</button>
+    </div>
+    <div class="tbl-wrap">
+      <table id="statsTable" style="min-width:900px;">
+        <thead id="statsHead"></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PATIENT PAGE ── -->
+  <div class="page" id="pagePatient">
+    <div class="page-title">顧客購買歷程查詢</div>
+    <div class="page-sub">刷健保卡或手動輸入身分證字號，查詢跨院區完整購買紀錄</div>
+    <div class="reader-bar">
+      <div class="reader-pill off" id="adminReaderPill">
+        <span class="reader-dot"></span><span id="adminReaderText">讀卡機未連線</span>
+      </div>
+      <button class="read-card-btn" id="adminReadBtn" onclick="adminTriggerCard()" disabled>💳 刷健保卡查詢</button>
+      <span style="color:#ccc;font-size:11px;flex-shrink:0;">或</span>
+      <div class="id-manual-wrap">
+        <input type="text" id="adminIdInput" placeholder="手動輸入身分證字號" maxlength="10"
+          oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')adminLookup()">
+        <button class="btn btn-primary" onclick="adminLookup()">🔍 查詢</button>
+        <button class="btn btn-outline" onclick="adminClearLookup()">清除</button>
+      </div>
+    </div>
+    <div id="adminLookupStatus" style="font-size:11px;color:#888;margin-bottom:10px;min-height:16px;"></div>
+    <div id="adminPatientResult" style="display:none;">
+      <div style="background:#fff;border-radius:var(--r);border:1px solid #E8EEE9;box-shadow:var(--sh-sm);overflow:hidden;">
+        <div id="adminPatientHeader" style="background:var(--sage-pale);padding:14px 18px;border-bottom:1px solid #D8EAD9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;"></div>
+        <div class="tbl-wrap"><table style="min-width:600px;"><thead id="patientThead"><tr></tr></thead><tbody id="adminPatientBody"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PRODUCTS PAGE ── -->
+  <div class="page" id="pageProducts">
+    <div class="page-title">商品管理</div>
+    <div class="page-sub">上架、下架商品與口味，儲存後前台即時更新</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-primary" onclick="openProductModal()">＋ 新增商品／口味</button>
+      <button class="btn btn-outline" onclick="resetProducts()">↺ 重置為預設</button>
+      <span style="font-size:11px;color:#888;">共 <strong id="pmCount">0</strong> 項商品</span>
+    </div>
+
+    <div id="pmList"></div>
+  </div>
+
+  <!-- ── SETTINGS PAGE ── -->
+  <div class="page" id="pageSettings">
+    <div class="page-title">系統設定</div>
+    <div class="page-sub">Google Sheets 串接、人員名單、PIN 碼</div>
+
+    <!-- GS -->
+    <div class="sc">
+      <h3>📋 Google Sheets 串接設定</h3>
+      <p>結帳後系統將自動把每筆訂單傳送至 Google 試算表。請依步驟完成設定：</p>
+      <div style="margin-bottom:14px;">
+        <div class="guide-step"><div class="gnum">1</div><div class="gtext">開啟您的 <strong>Google 試算表</strong> → 「擴充功能」→「Apps Script」</div></div>
+        <div class="guide-step"><div class="gnum">2</div><div class="gtext">複製下方程式碼，全部取代原有內容後儲存</div></div>
+        <div class="guide-step"><div class="gnum">3</div><div class="gtext">「部署」→「新增部署作業」→ 類型：<strong>網頁應用程式</strong>，存取權限：<strong>所有人</strong></div></div>
+        <div class="guide-step"><div class="gnum">4</div><div class="gtext">複製部署後的 URL，貼入下方並儲存</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#888;margin-bottom:5px;letter-spacing:.5px;">📄 APPS SCRIPT 程式碼（動態欄位版）</div>
+      <div style="background:#FFF8E1;border:1px solid #ECD9A0;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#7A5800;">
+        🆕 <strong>動態欄位版</strong>：新增商品後不需重新部署，Sheet 會自動在右側新增欄位
+      </div>
+      <div class="code-block">
+        <button class="copy-btn" onclick="copyScript()">複製</button>
+<span class="cm">// 擇木良食 × 金鶯診所｜銷售記錄接收器（動態欄位版）</span>
+<span class="cm">// 新增商品不需重新部署，doPost 會自動在 Sheet 新增欄位</span>
+<span class="kw">const</span> SHEET_NAME = <span class="str">'銷售紀錄'</span>;
+<span class="cm">// 固定欄位（前段 + 後段），商品欄位動態插入在中間</span>
+<span class="kw">const</span> FIXED_FRONT = [<span class="str">'日期'</span>,<span class="str">'時間'</span>,<span class="str">'院區'</span>,<span class="str">'顧客姓名'</span>,<span class="str">'身分證遮罩'</span>,<span class="str">'病歷號'</span>,<span class="str">'當班醫師'</span>,<span class="str">'櫃檯人員'</span>];
+<span class="kw">const</span> FIXED_BACK  = [<span class="str">'結帳金額'</span>,<span class="str">'付款方式'</span>,<span class="str">'醫師抽成'</span>,<span class="str">'員工抽成'</span>,<span class="str">'藥師抽成'</span>,<span class="str">'身分證雜湊'</span>];
+
+<span class="kw">function</span> <span class="fn">getOrCreateSheet</span>() {
+  <span class="kw">const</span> ss = SpreadsheetApp.<span class="fn">getActiveSpreadsheet</span>();
+  <span class="kw">let</span> s = ss.<span class="fn">getSheetByName</span>(SHEET_NAME);
+  <span class="kw">if</span> (!s) {
+    s = ss.<span class="fn">insertSheet</span>(SHEET_NAME);
+    s.<span class="fn">appendRow</span>([...FIXED_FRONT, ...FIXED_BACK]);
+    s.<span class="fn">getRange</span>(<span class="str">'1:1'</span>).<span class="fn">setFontWeight</span>(<span class="str">'bold'</span>).<span class="fn">setBackground</span>(<span class="str">'#2C3E35'</span>).<span class="fn">setFontColor</span>(<span class="str">'#fff'</span>);
+    s.<span class="fn">setFrozenRows</span>(1);
+  }
+  <span class="kw">return</span> s;
+}
+
+<span class="cm">// 確保 Sheet 有這個商品欄，沒有就在 FIXED_BACK 前面插入</span>
+<span class="kw">function</span> <span class="fn">ensureProductCol</span>(sheet, colName) {
+  <span class="kw">const</span> headers = sheet.<span class="fn">getRange</span>(1, 1, 1, sheet.<span class="fn">getLastColumn</span>()).<span class="fn">getValues</span>()[0];
+  <span class="kw">if</span> (headers.<span class="fn">includes</span>(colName)) <span class="kw">return</span>;
+  <span class="cm">// 找到 FIXED_BACK 第一欄（結帳金額）的位置，插入在它之前</span>
+  <span class="kw">const</span> insertBefore = headers.<span class="fn">indexOf</span>(FIXED_BACK[0]);
+  <span class="kw">const</span> insertCol = (insertBefore >= 0 ? insertBefore : headers.length) + 1;
+  sheet.<span class="fn">insertColumnBefore</span>(insertCol);
+  sheet.<span class="fn">getRange</span>(1, insertCol).<span class="fn">setValue</span>(colName)
+    .<span class="fn">setFontWeight</span>(<span class="str">'bold'</span>).<span class="fn">setBackground</span>(<span class="str">'#2C3E35'</span>).<span class="fn">setFontColor</span>(<span class="str">'#fff'</span>);
+}
+
+<span class="kw">function</span> <span class="fn">doPost</span>(e) {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> d = JSON.<span class="fn">parse</span>(e.postData.contents);
+    <span class="kw">const</span> qty = d.itemQty || {};
+    <span class="kw">const</span> sheet = <span class="fn">getOrCreateSheet</span>();
+
+    <span class="cm">// 確保所有本次訂單的商品欄都存在</span>
+    <span class="fn">Object</span>.<span class="fn">keys</span>(qty).<span class="fn">forEach</span>(col => <span class="fn">ensureProductCol</span>(sheet, col));
+
+    <span class="cm">// 重新讀取最新欄位順序</span>
+    <span class="kw">const</span> headers = sheet.<span class="fn">getRange</span>(1, 1, 1, sheet.<span class="fn">getLastColumn</span>()).<span class="fn">getValues</span>()[0];
+
+    <span class="cm">// 依欄位順序組出這筆資料</span>
+    <span class="kw">const</span> fixedData = {
+      <span class="str">'日期'</span>: d.date, <span class="str">'時間'</span>: d.time, <span class="str">'院區'</span>: d.clinic||<span class="str">''</span>,
+      <span class="str">'顧客姓名'</span>: d.customer, <span class="str">'身分證遮罩'</span>: d.idMask||<span class="str">''</span>, <span class="str">'病歷號'</span>: d.phone||<span class="str">''</span>,
+      <span class="str">'當班醫師'</span>: d.doctor, <span class="str">'櫃檯人員'</span>: d.staff||<span class="str">''</span>,
+      <span class="str">'結帳金額'</span>: d.total, <span class="str">'付款方式'</span>: d.payMethod,
+      <span class="str">'醫師抽成'</span>: d.doctorComm||0, <span class="str">'員工抽成'</span>: d.staffComm||0,
+      <span class="str">'藥師抽成'</span>: d.pharmaComm||0, <span class="str">'身分證雜湊'</span>: d.idHash||<span class="str">''</span>
+    };
+    <span class="kw">const</span> row = headers.<span class="fn">map</span>(h => qty[h] !== undefined ? qty[h] : (fixedData[h] !== undefined ? fixedData[h] : <span class="str">''</span>));
+    sheet.<span class="fn">appendRow</span>(row);
+    <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'ok'</span>});
+  } <span class="kw">catch</span>(err) { <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'error'</span>,msg:err.message}); }
+}
+
+<span class="kw">function</span> <span class="fn">doGet</span>(e) {
+  <span class="kw">const</span> p = (e||{}).parameter||{};
+  <span class="kw">if</span> (p.action===<span class="str">'query'</span>&&p.idHash) {
+    <span class="kw">try</span> {
+      <span class="kw">const</span> sheet = <span class="fn">getOrCreateSheet</span>();
+      <span class="kw">const</span> rows = sheet.<span class="fn">getDataRange</span>().<span class="fn">getValues</span>(), hdrs = rows[0];
+      <span class="kw">const</span> HC = hdrs.<span class="fn">indexOf</span>(<span class="str">'身分證雜湊'</span>);
+      <span class="kw">const</span> productCols = hdrs.<span class="fn">filter</span>(h => !FIXED_FRONT.<span class="fn">includes</span>(h) && !FIXED_BACK.<span class="fn">includes</span>(h));
+      <span class="kw">const</span> records = rows.<span class="fn">slice</span>(1).<span class="fn">filter</span>(r=>r[HC]===p.idHash).<span class="fn">map</span>(r=>{
+        <span class="kw">const</span> o={}; hdrs.<span class="fn">forEach</span>((h,i)=>o[h]=r[i]);
+        o.items = productCols.<span class="fn">filter</span>(c=>o[c]>0).<span class="fn">map</span>(c=>`${c}×${o[c]}`).<span class="fn">join</span>(<span class="str">'、'</span>);
+        o.date=o[<span class="str">'日期'</span>]; o.time=o[<span class="str">'時間'</span>]; o.clinic=o[<span class="str">'院區'</span>]; o.customer=o[<span class="str">'顧客姓名'</span>];
+        o.doctor=o[<span class="str">'當班醫師'</span>]; o.staff=o[<span class="str">'櫃檯人員'</span>]; o.total=o[<span class="str">'結帳金額'</span>]; o.payMethod=o[<span class="str">'付款方式'</span>];
+        <span class="kw">return</span> o;
+      });
+      <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'ok'</span>,records});
+    } <span class="kw">catch</span>(err){<span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'error'</span>,msg:err.message});}
+  }
+  <span class="kw">return</span> <span class="fn">json</span>({status:<span class="str">'ok'</span>,msg:<span class="str">'連線成功（動態欄位版）'</span>});
+}
+<span class="kw">function</span> <span class="fn">json</span>(o){<span class="kw">return</span> ContentService.<span class="fn">createTextOutput</span>(JSON.<span class="fn">stringify</span>(o)).<span class="fn">setMimeType</span>(ContentService.MimeType.JSON);}</div>
+      <div style="font-size:10px;font-weight:700;color:#888;margin:14px 0 5px;letter-spacing:.4px;">🔗 Apps Script 網頁應用程式 URL</div>
+      <div class="input-row">
+        <div class="fg"><input type="text" id="gsUrlInput" placeholder="https://script.google.com/macros/s/xxxxx/exec"></div>
+        <button class="btn btn-outline" onclick="testGs()">🔌 測試</button>
+        <button class="btn btn-primary" onclick="saveGs()">儲存</button>
+      </div>
+      <div id="gsStatus"></div>
+    </div>
+
+    <!-- STAFF -->
+    <div class="sc">
+      <h3>👥 醫師與人員名單</h3>
+      <p>新增或刪除前台可選擇的醫師與櫃檯人員，儲存後前台即時生效。</p>
+      <div class="two-col">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--brown);margin-bottom:8px;">👨‍⚕️ 醫師名單</div>
+          <div class="staff-add-row">
+            <input type="text" id="newDoctorInput" placeholder="輸入醫師姓名" onkeydown="if(event.key==='Enter')addPerson('doctor')">
+            <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addPerson('doctor')">＋</button>
+          </div>
+          <div class="chip-list" id="doctorList"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--brown);margin-bottom:8px;">💁 櫃檯人員</div>
+          <div class="staff-add-row">
+            <input type="text" id="newStaffInput" placeholder="輸入人員姓名" onkeydown="if(event.key==='Enter')addPerson('staff')">
+            <button class="btn btn-primary" style="height:34px;padding:0 12px;font-size:11px;" onclick="addPerson('staff')">＋</button>
+          </div>
+          <div class="chip-list" id="staffList"></div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
+        <button class="btn btn-primary" onclick="saveStaff()">💾 儲存名單</button>
+        <span id="staffSaveMsg" style="font-size:11px;color:var(--sage);"></span>
+      </div>
+    </div>
+
+    <!-- PIN -->
+    <div class="sc">
+      <h3>🔐 修改後台 PIN 碼</h3>
+      <p>修改工作人員登入後台的 PIN 碼（4位數字）。</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="fg" style="min-width:110px;"><label>目前 PIN</label><input type="password" id="oldPin" placeholder="目前 PIN" maxlength="4"></div>
+        <div class="fg" style="min-width:110px;"><label>新 PIN 碼</label><input type="password" id="newPin" placeholder="新 PIN（4位）" maxlength="4"></div>
+        <div class="fg" style="min-width:110px;"><label>確認新 PIN</label><input type="password" id="confirmPin" placeholder="再次輸入" maxlength="4"></div>
+        <button class="btn btn-primary" onclick="changePin()">更新</button>
+      </div>
+      <div id="pinChangeMsg" style="margin-top:7px;font-size:11px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="pm-modal-overlay" id="pmModal">
+  <div class="pm-modal">
+    <h3 id="pmModalTitle">新增商品</h3>
+    <div class="pm-form-grid">
+      <div class="fg"><label>分類（標籤頁）</label>
+        <select id="pmCat">
+          <option>蛋白代餐</option><option>Q飽纖燃飲</option><option>看診套組</option>
+          <option>盒裝膠囊</option><option>其他營養</option><option value="_new">＋ 新分類...</option>
+        </select>
+      </div>
+      <div class="fg" id="pmNewCatGroup" style="display:none;"><label>新分類名稱</label><input type="text" id="pmNewCat" placeholder="例：限定商品"></div>
+    </div>
+    <div class="pm-form-grid">
+      <div class="fg"><label>商品名稱</label><input type="text" id="pmName" placeholder="例：燕麥奶"></div>
+      <div class="fg"><label>表情符號</label><input type="text" id="pmEmoji" placeholder="例：🥛" maxlength="2"></div>
+    </div>
+    <div class="pm-form-grid">
+      <div class="fg"><label>單價（NT$）</label><input type="number" id="pmPrice" placeholder="例：90" min="0"></div>
+      <div class="fg"><label>群組類型</label>
+        <select id="pmGroup">
+          <option value="protein">蛋白代餐（買6送1）</option>
+          <option value="mct">Q飽纖燃飲（買6送1）</option>
+          <option value="package">看診套組（可選數量）</option>
+          <option value="capsule">膠囊（單件）</option>
+          <option value="other">其他（單件）</option>
+        </select>
+      </div>
+    </div>
+    <div class="pm-form-grid full" id="pmDetailGroup" style="display:none;">
+      <div class="fg"><label>套組說明（選填）</label><input type="text" id="pmDetail" placeholder="例：14包蛋白代餐｜一天兩次"></div>
+    </div>
+    <div class="pm-form-grid full" id="pmBadgeGroup" style="display:none;">
+      <div class="fg"><label>標籤（選填，如：熱銷、推薦）</label><input type="text" id="pmBadge" placeholder="例：熱銷"></div>
+    </div>
+    <div class="pm-modal-btns">
+      <button class="btn btn-outline" onclick="closePmModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePmModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── KEYS ──
+const SALES_KEY='clinicSalesLog',GS_KEY='gsUrl',PIN_KEY='adminPin',STAFF_KEY='clinicStaff',PRODUCTS_KEY='clinicProducts';
+const DEFAULT_PIN='1234';
+
+// ── DEFAULT PRODUCTS ──
+const DEFAULT_PRODUCTS=[
+  {cat:'蛋白代餐',id:'p1',emoji:'🍫',name:'巧克力',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p2',emoji:'☕',name:'觀音拿鐵',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p3',emoji:'🌿',name:'芒果百香',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p4',emoji:'🥛',name:'無添加原味',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p5',emoji:'🍎',name:'草莓蘋果',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p6',emoji:'🍵',name:'抹茶拿鐵',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p7',emoji:'🌾',name:'杏仁燕麥',price:90,group:'protein',active:true},
+  {cat:'蛋白代餐',id:'p8',emoji:'🖤',name:'黑芝麻',price:90,group:'protein',active:true},
+  {cat:'Q飽纖燃飲',id:'m1',emoji:'🍋',name:'檸果拿鐵',price:100,group:'mct',active:true},
+  {cat:'Q飽纖燃飲',id:'m2',emoji:'🫐',name:'莓果優格',price:100,group:'mct',active:true},
+  {cat:'Q飽纖燃飲',id:'m3',emoji:'🥭',name:'百香芒果',price:100,group:'mct',active:true},
+  {cat:'Q飽纖燃飲',id:'m4',emoji:'🌸',name:'荔枝玫瑰',price:100,group:'mct',active:true},
+  {cat:'看診套組',id:'pk1',emoji:'📦',name:'中碳套組',price:1000,group:'package',detail:'14包蛋白代餐｜一天兩次',badge:'熱銷',active:true},
+  {cat:'看診套組',id:'pk2',emoji:'📦',name:'低碳套組',price:1500,group:'package',detail:'21包蛋白代餐｜一天三次',badge:'推薦',active:true},
+  {cat:'盒裝膠囊',id:'c1',emoji:'💊',name:'好燃對策',price:960,group:'capsule',active:true},
+  {cat:'盒裝膠囊',id:'c2',emoji:'💊',name:'碳水對策',price:800,group:'capsule',active:true},
+  {cat:'盒裝膠囊',id:'c3',emoji:'💊',name:'甘好腸寶',price:1260,group:'capsule',active:true},
+  {cat:'盒裝膠囊',id:'c4',emoji:'💊',name:'好輕鬆',price:600,group:'capsule',active:true},
+  {cat:'盒裝膠囊',id:'c5',emoji:'💊',name:'好元氣',price:350,group:'capsule',active:true},
+  {cat:'其他營養',id:'o1',emoji:'🥚',name:'拿鐵蛋白棒',price:400,group:'other',active:true},
+  {cat:'其他營養',id:'o2',emoji:'🌿',name:'健健粉',price:420,group:'other',active:true},
+  {cat:'其他營養',id:'o3',emoji:'🔵',name:'複方蛋白粉',price:1100,group:'other',active:true},
+];
+
+function getProducts(){try{const s=localStorage.getItem(PRODUCTS_KEY);return s?JSON.parse(s):[...DEFAULT_PRODUCTS];}catch(e){return[...DEFAULT_PRODUCTS];}}
+function saveProducts(p){localStorage.setItem(PRODUCTS_KEY,JSON.stringify(p));}
+function getPin(){return localStorage.getItem(PIN_KEY)||DEFAULT_PIN;}
+
+// ── PIN ──
+let pinBuf='';
+function pinInput(d){if(pinBuf.length>=4)return;pinBuf+=d;updateDots();if(pinBuf.length===4)setTimeout(checkPin,200);}
+function pinDel(){pinBuf=pinBuf.slice(0,-1);updateDots();}
+function pinClear(){pinBuf='';updateDots();document.getElementById('pinError').textContent='';}
+function updateDots(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<pinBuf.length);}
+function checkPin(){
+  if(pinBuf===getPin()){
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appShell').classList.add('visible');
+    initApp();
+  }else{
+    document.getElementById('pinError').textContent='❌ PIN 碼錯誤，請重試';
+    pinBuf='';updateDots();setTimeout(()=>document.getElementById('pinError').textContent='',2000);
+  }
+}
+function logout(){document.getElementById('loginScreen').classList.remove('hidden');document.getElementById('appShell').classList.remove('visible');pinBuf='';updateDots();}
+
+// ── INIT ──
+function initApp(){
+  renderStats();
+  loadStaffData();renderStaffLists();
+  renderProductManager();
+  const gsUrl=localStorage.getItem(GS_KEY)||'';
+  if(gsUrl){document.getElementById('gsUrlInput').value=gsUrl;document.getElementById('gsBadge').classList.add('show');}
+  document.getElementById('statsDateLabel').textContent=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'short'})+' 銷售概覽';
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function switchPage(p){
+  ['stats','patient','products','settings'].forEach(n=>{
+    document.getElementById('page'+cap(n)).classList.toggle('active',n===p);
+    document.getElementById('nav'+cap(n)).classList.toggle('active',n===p);
+  });
+  if(p==='patient')connectAdminReader();
+}
+
+// ── STATS ──
+let activeCF='';
+function filterClinic(c,btn){activeCF=c;document.querySelectorAll('.clinic-filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderStats();}
+
+const COMM_RULES={'複方蛋白粉':{dr:100,st:20,ph:0},'蛋白代餐':{dr:100,st:10,ph:0},'Q飽纖燃飲':{dr:100,st:10,ph:0},'健健糖':{dr:50,st:10,ph:0},'蛋白棒':{dr:50,st:10,ph:0},'防蚊液':{dr:0,st:0,ph:30},'金鶯涼喉':{dr:0,st:0,ph:10},'好燃對策':{dr:0,st:0,ph:100},'碳水對策':{dr:0,st:0,ph:100},'好輕鬆':{dr:0,st:0,ph:50},'好元氣':{dr:0,st:0,ph:50},'甘好睡寶':{dr:0,st:0,ph:100},'中碳套組':{dr:100,st:10,ph:0},'低碳套組':{dr:100,st:10,ph:0},'拿鐵蛋白棒':{dr:50,st:10,ph:0},'健健粉':{dr:50,st:10,ph:0}};
+function calcComm(str){
+  let dr=0,st=0,ph=0;if(!str)return{dr,st,ph};
+  str.split('、').forEach(part=>{const m=part.match(/^(.+?)×(\d+)/);if(!m)return;const name=m[1].trim(),qty=parseInt(m[2])||1;for(const[k,r]of Object.entries(COMM_RULES)){if(name.includes(k)||k.includes(name)){dr+=r.dr*qty;st+=r.st*qty;ph+=r.ph*qty;break;}}});
+  return{dr,st,ph};
+}
+function getQty(e,key){
+  if(e.itemQty&&e.itemQty[key]!==undefined)return e.itemQty[key]||0;
+  const esc=key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g,'\\$&');
+  const m=(e.items||'').match(new RegExp(esc+'×(\\d+)'));
+  return m?parseInt(m[1]):0;
+}
+
+function renderStats(){
+  const allLog=JSON.parse(localStorage.getItem(SALES_KEY)||'[]');
+  const log=activeCF?allLog.filter(e=>(e.clinic||'')===activeCF):allLog;
+  const rev=log.reduce((s,e)=>s+(e.total||0),0);
+  let tdr=0,tst=0,tph=0;
+  log.forEach(e=>{if(e.pharmaComm!==undefined){tdr+=e.doctorComm||0;tst+=e.staffComm||0;tph+=e.pharmaComm||0;}else{const c=calcComm(e.items||'');tdr+=c.dr;tst+=c.st;tph+=c.ph;}});
+  document.getElementById('statRev').textContent='NT$'+rev.toLocaleString();
+  document.getElementById('statOrders').textContent=log.length;
+  document.getElementById('statDr').textContent='NT$'+tdr.toLocaleString();
+  document.getElementById('statSt').textContent='NT$'+tst.toLocaleString();
+  document.getElementById('statPh').textContent='NT$'+tph.toLocaleString();
+
+  // Dynamic columns from current products
+  const products=getProducts().filter(p=>p.active!==false);
+  const statKeys=[];
+  products.forEach(p=>{
+    const k=p.group==='protein'?`蛋白代餐-${p.name}`:p.group==='mct'?`Q飽-${p.name}`:p.name;
+    if(!statKeys.includes(k))statKeys.push(k);
+  });
+
+  document.getElementById('statsHead').innerHTML=`<tr><th>時間</th><th>院區</th><th>顧客</th><th>醫師</th><th>人員</th>${statKeys.map(k=>`<th style="font-size:10px;white-space:nowrap;">${k.replace('蛋白代餐-','').replace('Q飽-','Q飽')}</th>`).join('')}<th>金額</th><th>付款</th><th>醫師抽</th><th>員工抽</th><th>藥師抽</th></tr>`;
+
+  function qCell(q){return q?`<td style="text-align:center;"><strong style="color:var(--sage);">${q}</strong></td>`:`<td style="text-align:center;color:#ddd;">—</td>`;}
+
+  const tbody=document.getElementById('logBody');
+  if(!log.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="${10+statKeys.length}">尚無銷售紀錄</td></tr>`;return;}
+  tbody.innerHTML=[...log].reverse().map(e=>{
+    let dr,st,ph;
+    if(e.pharmaComm!==undefined){dr=e.doctorComm||0;st=e.staffComm||0;ph=e.pharmaComm||0;}else{const c=calcComm(e.items||'');dr=c.dr;st=c.st;ph=c.ph;}
+    return`<tr>
+      <td style="white-space:nowrap;">${e.time}</td>
+      <td><span style="font-size:10px;background:var(--sage-pale);color:var(--sage);padding:2px 7px;border-radius:9px;font-weight:600;white-space:nowrap;">${e.clinic||'-'}</span></td>
+      <td><strong>${e.customer}</strong>${e.phone?`<br><span style="color:#aaa;font-size:9px;">病歷號：${e.phone}</span>`:''}</td>
+      <td style="white-space:nowrap;">${e.doctor}</td>
+      <td style="white-space:nowrap;">${e.staff||'-'}</td>
+      ${statKeys.map(k=>qCell(getQty(e,k))).join('')}
+      <td style="white-space:nowrap;"><strong style="color:var(--sage);">NT$${(e.total||0).toLocaleString()}</strong></td>
+      <td><span class="tag ${e.payMethod==='cash'?'tag-cash':'tag-transfer'}">${e.payMethod==='cash'?'現金':'轉帳'}</span></td>
+      <td style="color:var(--brown);white-space:nowrap;">${dr?'NT$'+dr.toLocaleString():'-'}</td>
+      <td style="color:var(--brown);white-space:nowrap;">${st?'NT$'+st.toLocaleString():'-'}</td>
+      <td style="color:var(--purple);white-space:nowrap;">${ph?'NT$'+ph.toLocaleString():'-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function clearLog(){if(!confirm('確定要清除所有銷售紀錄嗎？'))return;localStorage.setItem(SALES_KEY,'[]');renderStats();toast('🗑️ 紀錄已清除');}
+
+// ── PATIENT LOOKUP ──
+async function hashId(id){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(id.toUpperCase()));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,16);}
+function maskId(id){if(!id||id.length<4)return id;return id.slice(0,3)+'****'+id.slice(-3);}
+
+async function adminLookup(){
+  const raw=document.getElementById('adminIdInput').value.trim().toUpperCase();
+  if(raw.length<6){toast('⚠️ 請輸入至少6位');return;}
+  const hash=await hashId(raw);
+  const statusEl=document.getElementById('adminLookupStatus');
+  statusEl.innerHTML='<span style="color:#888;">🔄 查詢中...</span>';
+  const gsUrl=localStorage.getItem(GS_KEY)||'';
+  let records=[],source='local';
+  if(gsUrl){try{const res=await fetch(`${gsUrl}?action=query&idHash=${encodeURIComponent(hash)}`);const d=await res.json();if(d.status==='ok'&&Array.isArray(d.records)){records=d.records;source='sheets';}}catch(e){}}
+  if(source==='local'){const log=JSON.parse(localStorage.getItem(SALES_KEY)||'[]');records=log.filter(e=>e.idHash===hash);}
+  if(!records.length){statusEl.innerHTML=`<span style="color:var(--red);">❌ 查無 ${maskId(raw)} 的購買紀錄</span>`;document.getElementById('adminPatientResult').style.display='none';return;}
+  statusEl.innerHTML=`<span style="color:var(--sage);">找到 <strong>${records.length}</strong> 筆｜${maskId(raw)}｜${source==='sheets'?'✅ Google Sheets':'⚠️ 僅本機'}</span>`;
+  document.getElementById('adminPatientResult').style.display='';
+  const totalSpent=records.reduce((s,e)=>s+(Number(e.total)||0),0);
+  const firstName=records[records.length-1].customer||'';
+  const clinics={};records.forEach(r=>{const c=r.clinic||'未知';clinics[c]=(clinics[c]||0)+1;});
+  const clinicSum=Object.entries(clinics).map(([c,n])=>`${c}×${n}`).join('、');
+  document.getElementById('adminPatientHeader').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--sage);color:#fff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center;">${firstName?firstName.charAt(0):'👤'}</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;">${firstName} <span style="font-size:11px;color:#888;font-weight:400;">${maskId(raw)}</span></div>
+        <div style="font-size:10px;color:#888;margin-top:2px;">院區：${clinicSum}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:20px;flex-shrink:0;">
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--sage);">${records.length}</div><div style="font-size:10px;color:#888;">次數</div></div>
+      <div style="text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--sage);">NT$${totalSpent.toLocaleString()}</div><div style="font-size:10px;color:#888;">累計消費</div></div>
+    </div>`;
+  function parseItems(str){const m={};if(!str)return m;str.split('、').forEach(p=>{const x=p.match(/^(.+?)×(\d+)/);if(x)m[x[1].trim()]=parseInt(x[2])||1;});return m;}
+  const seenP=[];records.forEach(r=>{Object.keys(parseItems(r.items||'')).forEach(k=>{if(!seenP.includes(k))seenP.push(k);});});
+  document.getElementById('patientThead').innerHTML=`<tr><th>日期</th><th>院區</th><th>醫師</th>${seenP.map(p=>`<th style="font-size:10px;white-space:nowrap;">${p}</th>`).join('')}<th>金額</th><th>付款</th></tr>`;
+  document.getElementById('adminPatientBody').innerHTML=[...records].reverse().map(e=>{
+    const m=parseItems(e.items||'');
+    return`<tr>
+      <td style="white-space:nowrap;">${e.date||''}</td>
+      <td><span style="font-size:10px;background:var(--sage-pale);color:var(--sage);padding:2px 7px;border-radius:9px;font-weight:600;">${e.clinic||'-'}</span></td>
+      <td style="white-space:nowrap;">${e.doctor||''}</td>
+      ${seenP.map(p=>m[p]?`<td style="text-align:center;"><strong style="color:var(--sage);">${m[p]}</strong></td>`:`<td style="text-align:center;color:#ddd;">—</td>`).join('')}
+      <td style="white-space:nowrap;"><strong style="color:var(--sage);">NT$${(Number(e.total)||0).toLocaleString()}</strong></td>
+      <td><span class="tag ${e.payMethod==='cash'?'tag-cash':'tag-transfer'}">${e.payMethod==='cash'?'現金':'轉帳'}</span></td>
+    </tr>`;
+  }).join('');
+}
+function adminClearLookup(){document.getElementById('adminIdInput').value='';document.getElementById('adminLookupStatus').innerHTML='';document.getElementById('adminPatientResult').style.display='none';}
+
+// ── READER ──
+const WS_URL='ws://localhost:8765';
+let adminWs=null,adminWsRetry=3000;
+function setReaderState(s,t){const p=document.getElementById('adminReaderPill');const tx=document.getElementById('adminReaderText');const b=document.getElementById('adminReadBtn');if(!p)return;p.className='reader-pill '+s;tx.textContent=t;if(b)b.disabled=s!=='ready';}
+function connectAdminReader(){
+  if(adminWs&&adminWs.readyState===WebSocket.OPEN)return;
+  setReaderState('connecting','連線中...');
+  try{
+    adminWs=new WebSocket(WS_URL);
+    adminWs.onopen=()=>{adminWsRetry=3000;};
+    adminWs.onmessage=e=>{try{handleCardMsg(JSON.parse(e.data));}catch(err){}};
+    adminWs.onclose=()=>{setReaderState('off','讀卡機未連線');setTimeout(()=>{adminWsRetry=Math.min(adminWsRetry*1.5,30000);connectAdminReader();},adminWsRetry);};
+    adminWs.onerror=()=>setReaderState('error','連線失敗');
+  }catch(e){setReaderState('error','連線失敗');}
+}
+function handleCardMsg(msg){
+  if(msg.type==='status'){if(msg.ready)setReaderState('ready',`讀卡機就緒${msg.mode==='mock'?' (模擬)':''}`);}
+  else if(msg.type==='reading')setReaderState('reading','請插入健保卡...');
+  else if(msg.type==='card_data'){setReaderState('ready','讀卡機就緒');if(msg.success){document.getElementById('adminIdInput').value=msg.id||'';toast(`💳 讀卡成功：${msg.name||msg.id}`);adminLookup();}else toast('❌ 讀卡失敗：'+(msg.error||'未知'));}
+}
+function adminTriggerCard(){if(!adminWs||adminWs.readyState!==WebSocket.OPEN){toast('⚠️ 讀卡機未連線');return;}adminWs.send(JSON.stringify({cmd:'read_card',timeout:20}));}
+
+// ── PRODUCT MANAGER ──
+function renderProductManager(){
+  const products=getProducts();
+  document.getElementById('pmCount').textContent=products.length;
+  const cats=[],groups={};
+  products.forEach(p=>{if(!groups[p.cat]){cats.push(p.cat);groups[p.cat]=[];}groups[p.cat].push(p);});
+  const CAT_EMOJI={'蛋白代餐':'🥛','Q飽纖燃飲':'💧','看診套組':'🎁','盒裝膠囊':'💊','其他營養':'🌿'};
+  const GROUP_LABEL={'protein':'蛋白代餐（買6送1）','mct':'Q飽（買6送1）','package':'套組','capsule':'膠囊','other':'其他'};
+
+  document.getElementById('pmList').innerHTML=cats.map(cat=>`
+    <div class="pm-grid" style="margin-bottom:12px;" data-cat="${cat}">
+      <div class="pm-cat-header">
+        <span>${CAT_EMOJI[cat]||'🛍️'} ${cat}</span>
+        <span style="font-size:10px;color:var(--sage);">${groups[cat].length} 項 <span style="color:#bbb;font-weight:400;">｜ 拖曳 ☰ 排序</span></span>
+      </div>
+      <div class="pm-cat-body" data-cat="${cat}">
+        ${groups[cat].map(p=>`
+          <div class="pm-item${p.active===false?' inactive':''}" draggable="true" data-id="${p.id}" data-cat="${p.cat}">
+            <span class="pm-drag" title="拖曳排序">☰</span>
+            <span class="pm-emoji">${p.emoji||'📦'}</span>
+            <div class="pm-info">
+              <span class="pm-name">${p.name}</span>
+              <span style="font-size:9px;color:#aaa;margin-left:5px;">${GROUP_LABEL[p.group]||p.group}</span>
+            </div>
+            <span class="pm-price">NT$${p.price.toLocaleString()}</span>
+            <button class="pm-edit-btn" onclick="openProductModal('${p.id}')">編輯</button>
+            <button class="pm-toggle${p.active!==false?' on':''}" onclick="toggleProduct('${p.id}')" title="${p.active!==false?'點擊下架':'點擊上架'}"></button>
+            <button class="pm-del-btn" onclick="deleteProduct('${p.id}')" title="刪除">×</button>
+          </div>`).join('')}
+        <div class="pm-add-row" data-add-row>
+          <button class="btn btn-sm primary" onclick="openProductModal(null,'${cat}')">＋ 在「${cat}」新增</button>
+        </div>
+      </div>
+    </div>`).join('');
+
+  initDragSort();
+}
+
+// ── DRAG & DROP SORT ──
+let dragSrc=null;
+
+function initDragSort(){
+  document.querySelectorAll('.pm-item').forEach(el=>{
+    el.addEventListener('dragstart',e=>{
+      dragSrc=el;
+      el.style.opacity='.4';
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain', el.dataset.id);
+    });
+    el.addEventListener('dragend',e=>{
+      el.style.opacity='';
+      document.querySelectorAll('.pm-item').forEach(x=>x.classList.remove('drag-over'));
+      document.querySelectorAll('.pm-cat-body').forEach(x=>x.classList.remove('drag-over-body'));
+    });
+    el.addEventListener('dragover',e=>{
+      e.preventDefault();e.dataTransfer.dropEffect='move';
+      if(dragSrc&&dragSrc!==el){
+        document.querySelectorAll('.pm-item').forEach(x=>x.classList.remove('drag-over'));
+        el.classList.add('drag-over');
+      }
+    });
+    el.addEventListener('dragleave',e=>{el.classList.remove('drag-over');});
+    el.addEventListener('drop',e=>{
+      e.preventDefault();
+      if(!dragSrc||dragSrc===el)return;
+      const srcId=dragSrc.dataset.id;
+      const tgtId=el.dataset.id;
+      const tgtCat=el.dataset.cat;
+      const products=getProducts();
+      const srcIdx=products.findIndex(p=>p.id===srcId);
+      const tgtIdx=products.findIndex(p=>p.id===tgtId);
+      if(srcIdx<0||tgtIdx<0)return;
+      // Update category if dropped into different cat
+      products[srcIdx].cat=tgtCat;
+      // Move in array
+      const [item]=products.splice(srcIdx,1);
+      const newTgt=products.findIndex(p=>p.id===tgtId);
+      products.splice(newTgt,0,item);
+      saveProducts(products);
+      renderProductManager();
+      toast('✅ 順序已更新');
+    });
+  });
+
+  // Also allow drop on empty category body
+  document.querySelectorAll('.pm-cat-body').forEach(body=>{
+    body.addEventListener('dragover',e=>{e.preventDefault();body.classList.add('drag-over-body');});
+    body.addEventListener('dragleave',e=>{if(!body.contains(e.relatedTarget))body.classList.remove('drag-over-body');});
+    body.addEventListener('drop',e=>{
+      e.preventDefault();body.classList.remove('drag-over-body');
+      if(!dragSrc)return;
+      const targetEl=e.target.closest('.pm-item');
+      if(targetEl)return; // handled by item drop
+      const tgtCat=body.dataset.cat;
+      const srcId=dragSrc.dataset.id;
+      const products=getProducts();
+      const srcIdx=products.findIndex(p=>p.id===srcId);
+      if(srcIdx<0)return;
+      // Move to end of that category
+      products[srcIdx].cat=tgtCat;
+      const [item]=products.splice(srcIdx,1);
+      // Find last index of tgtCat
+      let lastIdx=products.reduce((acc,p,i)=>p.cat===tgtCat?i:acc,-1);
+      products.splice(lastIdx+1,0,item);
+      saveProducts(products);
+      renderProductManager();
+      toast('✅ 已移至「'+tgtCat+'」');
+    });
+  });
+}
+
+function toggleProduct(id){
+  const p=getProducts();const idx=p.findIndex(x=>x.id===id);
+  if(idx<0)return;p[idx].active=p[idx].active===false?true:false;
+  saveProducts(p);renderProductManager();
+  toast(p[idx].active?`✅ 已上架：${p[idx].name}`:`⏸ 已下架：${p[idx].name}`);
+}
+
+function deleteProduct(id){
+  const p=getProducts();const item=p.find(x=>x.id===id);
+  if(!item||!confirm(`確定刪除「${item.name}」？\n此動作無法復原。`))return;
+  saveProducts(p.filter(x=>x.id!==id));renderProductManager();toast('🗑️ 已刪除：'+item.name);
+}
+
+function resetProducts(){
+  if(!confirm('確定重置為系統預設商品清單？\n所有自訂商品將被覆蓋。'))return;
+  saveProducts([...DEFAULT_PRODUCTS]);renderProductManager();toast('↺ 已重置為預設商品');
+}
+
+// ── PRODUCT MODAL ──
+let editingProductId=null;
+function openProductModal(id=null,defaultCat=''){
+  editingProductId=id;
+  const modal=document.getElementById('pmModal');
+  modal.classList.add('open');
+  const products=getProducts();
+  const cats=[...new Set(products.map(p=>p.cat))];
+  const catSel=document.getElementById('pmCat');
+  catSel.innerHTML=cats.map(c=>`<option${c===defaultCat?' selected':''}>${c}</option>`).join('')+'<option value="_new">＋ 新分類...</option>';
+  if(id){
+    const p=products.find(x=>x.id===id);
+    if(!p)return;
+    document.getElementById('pmModalTitle').textContent='編輯商品';
+    catSel.value=p.cat;
+    document.getElementById('pmName').value=p.name;
+    document.getElementById('pmEmoji').value=p.emoji||'';
+    document.getElementById('pmPrice').value=p.price;
+    document.getElementById('pmGroup').value=p.group;
+    document.getElementById('pmDetail').value=p.detail||'';
+    document.getElementById('pmBadge').value=p.badge||'';
+  }else{
+    document.getElementById('pmModalTitle').textContent='新增商品';
+    ['pmName','pmEmoji','pmDetail','pmBadge'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('pmPrice').value='';
+    document.getElementById('pmGroup').value='other';
+  }
+  updatePmFields();
+}
+function closePmModal(){document.getElementById('pmModal').classList.remove('open');editingProductId=null;}
+function updatePmFields(){
+  const grp=document.getElementById('pmGroup').value;
+  const isPkg=grp==='package';
+  document.getElementById('pmDetailGroup').style.display=isPkg?'block':'none';
+  document.getElementById('pmBadgeGroup').style.display=isPkg?'block':'none';
+  const catVal=document.getElementById('pmCat').value;
+  document.getElementById('pmNewCatGroup').style.display=catVal==='_new'?'block':'none';
+}
+document.getElementById('pmGroup').addEventListener('change',updatePmFields);
+document.getElementById('pmCat').addEventListener('change',updatePmFields);
+
+function savePmModal(){
+  const catVal=document.getElementById('pmCat').value;
+  const newCat=document.getElementById('pmNewCat').value.trim();
+  const cat=catVal==='_new'?newCat:catVal;
+  if(!cat){toast('⚠️ 請選擇或輸入分類');return;}
+  const name=document.getElementById('pmName').value.trim();
+  if(!name){toast('⚠️ 請輸入商品名稱');return;}
+  const price=parseInt(document.getElementById('pmPrice').value)||0;
+  const emoji=document.getElementById('pmEmoji').value.trim()||'📦';
+  const group=document.getElementById('pmGroup').value;
+  const detail=document.getElementById('pmDetail').value.trim();
+  const badge=document.getElementById('pmBadge').value.trim();
+
+  const products=getProducts();
+  if(editingProductId){
+    const idx=products.findIndex(p=>p.id===editingProductId);
+    if(idx>=0){products[idx]={...products[idx],cat,name,emoji,price,group,detail:detail||undefined,badge:badge||undefined};}
+  }else{
+    const newId='custom_'+Date.now();
+    const newP={cat,id:newId,emoji,name,price,group,active:true};
+    if(detail)newP.detail=detail;if(badge)newP.badge=badge;
+    products.push(newP);
+  }
+  saveProducts(products);renderProductManager();closePmModal();
+  toast(editingProductId?`✅ 已更新：${name}`:`✅ 已新增：${name}`);
+}
+
+// ── STAFF ──
+let editDoctors=[],editStaff=[];
+function loadStaffData(){
+  const s=localStorage.getItem(STAFF_KEY);
+  if(s){const d=JSON.parse(s);editDoctors=[...(d.doctors||[])];editStaff=[...(d.staff||[])];}
+  else{editDoctors=[];editStaff=[];}
+}
+function renderStaffLists(){renderChips('doctorList',editDoctors,'doctor');renderChips('staffList',editStaff,'staff');}
+function renderChips(id,list,type){document.getElementById(id).innerHTML=list.map((n,i)=>`<span class="chip">${n}<button class="chip-del" onclick="removePerson('${type}',${i})">×</button></span>`).join('');}
+function addPerson(type){
+  const id=type==='doctor'?'newDoctorInput':'newStaffInput';
+  const v=document.getElementById(id).value.trim();if(!v)return;
+  if(type==='doctor'){if(editDoctors.includes(v)){toast('⚠️ 已存在');return;}editDoctors.push(v);}
+  else{if(editStaff.includes(v)){toast('⚠️ 已存在');return;}editStaff.push(v);}
+  document.getElementById(id).value='';renderStaffLists();
+}
+function removePerson(type,i){if(type==='doctor')editDoctors.splice(i,1);else editStaff.splice(i,1);renderStaffLists();}
+function saveStaff(){
+  localStorage.setItem(STAFF_KEY,JSON.stringify({doctors:editDoctors,staff:editStaff}));
+  const m=document.getElementById('staffSaveMsg');m.textContent='✅ 已儲存，前台即時生效！';toast('✅ 人員名單已更新');setTimeout(()=>m.textContent='',3000);
+}
+
+// ── GS ──
+function saveGs(){const u=document.getElementById('gsUrlInput').value.trim();if(!u){toast('⚠️ 請輸入 URL');return;}localStorage.setItem(GS_KEY,u);document.getElementById('gsBadge').classList.add('show');toast('✅ URL 已儲存');}
+async function testGs(){
+  const u=document.getElementById('gsUrlInput').value.trim();if(!u){toast('⚠️ 請先輸入 URL');return;}
+  setGsS('pending','🔄 測試中...');
+  try{const res=await fetch(u);const d=await res.json();d.status==='ok'?setGsS('ok','✅ 連線成功！'):setGsS('err','❌ 回應異常');}catch(e){setGsS('err','❌ 連線失敗：'+e.message);}
+}
+function setGsS(t,m){const c=t==='ok'?'pill-ok':t==='err'?'pill-err':'pill-pending';document.getElementById('gsStatus').innerHTML=`<span class="status-pill ${c}">${m}</span>`;}
+
+// ── PIN CHANGE ──
+function changePin(){
+  const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value,c=document.getElementById('confirmPin').value;
+  const m=document.getElementById('pinChangeMsg');
+  if(o!==getPin()){m.innerHTML='<span style="color:var(--red)">❌ 目前 PIN 碼不正確</span>';return;}
+  if(!/^\d{4}$/.test(n)){m.innerHTML='<span style="color:var(--red)">❌ 新 PIN 必須為 4 位數字</span>';return;}
+  if(n!==c){m.innerHTML='<span style="color:var(--red)">❌ 兩次輸入不一致</span>';return;}
+  localStorage.setItem(PIN_KEY,n);['oldPin','newPin','confirmPin'].forEach(id=>document.getElementById(id).value='');
+  m.innerHTML='<span style="color:var(--sage)">✅ PIN 碼已更新！</span>';toast('✅ PIN 碼更新成功');setTimeout(()=>m.innerHTML='',3000);
+}
+
+// ── COPY SCRIPT (動態欄位版) ──
+function copyScript(){
+  const code=`// 擇木良食 × 金鶯診所｜銷售記錄接收器（動態欄位版）
+// 新增商品後不需重新部署，doPost 會自動偵測並在 Sheet 新增欄位
+const SHEET_NAME = '銷售紀錄';
+const FIXED_FRONT = ['日期','時間','院區','顧客姓名','身分證遮罩','病歷號','當班醫師','櫃檯人員'];
+const FIXED_BACK  = ['結帳金額','付款方式','醫師抽成','員工抽成','藥師抽成','身分證雜湊'];
+
+function getOrCreateSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let s = ss.getSheetByName(SHEET_NAME);
+  if (!s) {
+    s = ss.insertSheet(SHEET_NAME);
+    s.appendRow([...FIXED_FRONT, ...FIXED_BACK]);
+    s.getRange('1:1').setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+    s.setFrozenRows(1);
+  }
+  return s;
+}
+
+// 確保 Sheet 有這個商品欄，沒有就插入在 FIXED_BACK 前面
+function ensureProductCol(sheet, colName) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.includes(colName)) return;
+  const insertBefore = headers.indexOf(FIXED_BACK[0]);
+  const insertCol = (insertBefore >= 0 ? insertBefore : headers.length) + 1;
+  sheet.insertColumnBefore(insertCol);
+  sheet.getRange(1, insertCol).setValue(colName)
+    .setFontWeight('bold').setBackground('#2C3E35').setFontColor('#fff');
+}
+
+function doPost(e) {
+  try {
+    const d = JSON.parse(e.postData.contents);
+    const qty = d.itemQty || {};
+    const sheet = getOrCreateSheet();
+
+    // 確保所有本次訂單的商品欄都存在（新商品自動新增欄位）
+    Object.keys(qty).forEach(col => ensureProductCol(sheet, col));
+
+    // 重新讀取最新欄位順序，依序填入資料
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const fixedData = {
+      '日期': d.date, '時間': d.time, '院區': d.clinic||'',
+      '顧客姓名': d.customer, '身分證遮罩': d.idMask||'', '病歷號': d.phone||'',
+      '當班醫師': d.doctor, '櫃檯人員': d.staff||'',
+      '結帳金額': d.total, '付款方式': d.payMethod,
+      '醫師抽成': d.doctorComm||0, '員工抽成': d.staffComm||0,
+      '藥師抽成': d.pharmaComm||0, '身分證雜湊': d.idHash||''
+    };
+    const row = headers.map(h => qty[h] !== undefined ? qty[h] : (fixedData[h] !== undefined ? fixedData[h] : ''));
+    sheet.appendRow(row);
+    return json({status:'ok'});
+  } catch(err) { return json({status:'error',msg:err.message}); }
+}
+
+function doGet(e) {
+  const p = (e||{}).parameter||{};
+  if (p.action==='query' && p.idHash) {
+    try {
+      const sheet = getOrCreateSheet();
+      const rows = sheet.getDataRange().getValues(), hdrs = rows[0];
+      const HC = hdrs.indexOf('身分證雜湊');
+      const productCols = hdrs.filter(h => !FIXED_FRONT.includes(h) && !FIXED_BACK.includes(h));
+      const records = rows.slice(1).filter(r=>r[HC]===p.idHash).map(r=>{
+        const o={}; hdrs.forEach((h,i)=>o[h]=r[i]);
+        o.items = productCols.filter(c=>o[c]>0).map(c=>\`\${c}×\${o[c]}\`).join('、');
+        o.date=o['日期']; o.time=o['時間']; o.clinic=o['院區']; o.customer=o['顧客姓名'];
+        o.doctor=o['當班醫師']; o.staff=o['櫃檯人員']; o.total=o['結帳金額']; o.payMethod=o['付款方式'];
+        return o;
+      });
+      return json({status:'ok', records});
+    } catch(err) { return json({status:'error',msg:err.message}); }
+  }
+  return json({status:'ok', msg:'連線成功（動態欄位版）'});
+}
+
+function json(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}`;
+  navigator.clipboard.writeText(code).then(()=>toast('✅ 程式碼已複製（動態欄位版）'));
+}
+
+// ── TOAST ──
+function toast(msg){const el=document.createElement('div');el.className='toast';el.textContent=msg;document.getElementById('toastWrap').appendChild(el);setTimeout(()=>el.remove(),3000);}
+
+// Auto-refresh
+setInterval(()=>{if(document.getElementById('appShell').classList.contains('visible'))renderStats();},30000);
+</script>
+</body>
+</html>
